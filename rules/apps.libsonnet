@@ -418,6 +418,17 @@
         ),
         local knownManagedPodOwnerMatchers = "%(daemonSet)s|%(deployment)s|%(job)s|%(replicaSet)s|%(statefulSet)s" % pascalCaseWorkloadTypes,
         local knownManagedJobOwnerMatchers = "%(pod)s" % pascalCaseWorkloadTypes,
+        local readyPodsForWorkload(workloadExpr) = (
+          |||
+            sum by (%(clusterLabel)s, %(namespaceLabel)s, workload, workload_type) (
+              max by (%(clusterLabel)s, %(namespaceLabel)s, pod) (
+                kube_pod_status_ready{%(kubeStateMetricsSelector)s, condition="true"}
+              )
+              * on (%(clusterLabel)s, %(namespaceLabel)s, pod) group_left (workload, workload_type)
+              (%(workloadExpr)s)
+            )
+          ||| % ($._config { workloadExpr: workloadExpr })
+        ),
         rules: [
           {
             // DaemonSet
@@ -558,16 +569,191 @@
             )
           },
           {
+            // DaemonSet
             record: 'namespace_workload:kube_pods_ready:sum',
-            expr: (
+            expr: readyPodsForWorkload(
               |||
-                sum by (%(clusterLabel)s, %(namespaceLabel)s, workload, workload_type) (
-                  kube_pod_status_ready{%(kubeStateMetricsSelector)s, condition="true"}
-                  * on (%(clusterLabel)s, %(namespaceLabel)s, pod) group_left (workload, workload_type)
-                  namespace_workload_pod:kube_pod_owner:relabel
+                max by (%(clusterLabel)s, %(namespaceLabel)s, pod, workload, workload_type) (
+                  label_replace(
+                    label_replace(
+                      kube_pod_owner{%(kubeStateMetricsSelector)s, owner_kind="DaemonSet", owner_is_controller="true"},
+                      "workload", "$1", "owner_name", "(.+)"
+                    ),
+                    "workload_type", "%(daemonSet)s", "", ""
+                  )
                 )
+              ||| % ($._config + workloadTypes)
+            ),
+          },
+          {
+            // Deployment
+            record: 'namespace_workload:kube_pods_ready:sum',
+            expr: readyPodsForWorkload(
               |||
-            ) % $._config
+                max by (%(clusterLabel)s, %(namespaceLabel)s, pod, workload, workload_type) (
+                  label_replace(
+                    label_replace(
+                      max by (%(clusterLabel)s, %(namespaceLabel)s, pod, replicaset) (
+                        label_replace(
+                          kube_pod_owner{%(kubeStateMetricsSelector)s, owner_kind="ReplicaSet", owner_is_controller="true"},
+                          "replicaset", "$1", "owner_name", "(.+)"
+                        )
+                      )
+                      * on (%(clusterLabel)s, %(namespaceLabel)s, replicaset) group_left (owner_name)
+                      max by (%(clusterLabel)s, %(namespaceLabel)s, replicaset, owner_name) (
+                        kube_replicaset_owner{%(kubeStateMetricsSelector)s, owner_kind="Deployment", owner_is_controller="true"}
+                      ),
+                      "workload", "$1", "owner_name", "(.+)"
+                    ),
+                    "workload_type", "%(deployment)s", "", ""
+                  )
+                )
+              ||| % ($._config + workloadTypes)
+            ),
+          },
+          {
+            // Job (Bare/StandAlone)
+            record: 'namespace_workload:kube_pods_ready:sum',
+            expr: readyPodsForWorkload(
+              |||
+                max by (%(clusterLabel)s, %(namespaceLabel)s, pod, workload, workload_type) (
+                  label_replace(
+                    label_replace(
+                      max by (%(clusterLabel)s, %(namespaceLabel)s, pod, job_name) (
+                        label_replace(
+                          kube_pod_owner{%(kubeStateMetricsSelector)s, owner_kind="Job", owner_is_controller="true"},
+                          "job_name", "$1", "owner_name", "(.+)"
+                        )
+                      )
+                      * on (%(clusterLabel)s, %(namespaceLabel)s, job_name) group_left ()
+                      max by (%(clusterLabel)s, %(namespaceLabel)s, job_name) (
+                        kube_job_owner{%(kubeStateMetricsSelector)s, owner_kind=""}
+                        OR
+                        (
+                          kube_job_owner{%(kubeStateMetricsSelector)s, owner_kind!=""}
+                          unless on (%(clusterLabel)s, %(namespaceLabel)s, job_name)
+                          kube_job_owner{%(kubeStateMetricsSelector)s, owner_is_controller="true"}
+                        )
+                      ),
+                      "workload", "$1", "job_name", "(.+)"
+                    ),
+                    "workload_type", "%(job)s", "", ""
+                  )
+                )
+              ||| % ($._config + workloadTypes)
+            ),
+          },
+          {
+            // Job (owned by Pod)
+            record: 'namespace_workload:kube_pods_ready:sum',
+            expr: readyPodsForWorkload(
+              |||
+                max by (%(clusterLabel)s, %(namespaceLabel)s, pod, workload, workload_type) (
+                  label_replace(
+                    label_replace(
+                      max by (%(clusterLabel)s, %(namespaceLabel)s, pod, job_name) (
+                        label_replace(
+                          kube_pod_owner{%(kubeStateMetricsSelector)s, owner_kind="Job", owner_is_controller="true"},
+                          "job_name", "$1", "owner_name", "(.+)"
+                        )
+                      )
+                      * on (%(clusterLabel)s, %(namespaceLabel)s, job_name) group_left ()
+                      max by (%(clusterLabel)s, %(namespaceLabel)s, job_name) (
+                        kube_job_owner{%(kubeStateMetricsSelector)s, owner_kind="Pod", owner_is_controller="true"}
+                      ),
+                      "workload", "$1", "job_name", "(.+)"
+                    ),
+                    "workload_type", "%(job)s", "", ""
+                  )
+                )
+              ||| % ($._config + workloadTypes)
+            ),
+          },
+          {
+            // ReplicaSet (Bare/StandAlone)
+            record: 'namespace_workload:kube_pods_ready:sum',
+            expr: readyPodsForWorkload(
+              |||
+                max by (%(clusterLabel)s, %(namespaceLabel)s, pod, workload, workload_type) (
+                  label_replace(
+                    label_replace(
+                      max by (%(clusterLabel)s, %(namespaceLabel)s, pod, replicaset) (
+                        label_replace(
+                          kube_pod_owner{%(kubeStateMetricsSelector)s, owner_kind="ReplicaSet", owner_is_controller="true"},
+                          "replicaset", "$1", "owner_name", "(.+)"
+                        )
+                      )
+                      * on (%(clusterLabel)s, %(namespaceLabel)s, replicaset) group_left ()
+                      max by (%(clusterLabel)s, %(namespaceLabel)s, replicaset) (
+                        kube_replicaset_owner{%(kubeStateMetricsSelector)s, owner_kind=""}
+                      ),
+                      "workload", "$1", "replicaset", "(.+)"
+                    ),
+                    "workload_type", "%(replicaSet)s", "", ""
+                  )
+                )
+              ||| % ($._config + workloadTypes)
+            ),
+          },
+          {
+            // StatefulSet
+            record: 'namespace_workload:kube_pods_ready:sum',
+            expr: readyPodsForWorkload(
+              |||
+                max by (%(clusterLabel)s, %(namespaceLabel)s, pod, workload, workload_type) (
+                  label_replace(
+                    label_replace(
+                      kube_pod_owner{%(kubeStateMetricsSelector)s, owner_kind="StatefulSet", owner_is_controller="true"},
+                      "workload", "$1", "owner_name", "(.+)"
+                    ),
+                    "workload_type", "%(statefulSet)s", "", ""
+                  )
+                )
+              ||| % ($._config + workloadTypes)
+            ),
+          },
+          {
+            // workload aggregation for unknown pod owner types
+            record: 'namespace_workload:kube_pods_ready:sum',
+            expr: readyPodsForWorkload(
+              |||
+                max by (%(clusterLabel)s, %(namespaceLabel)s, pod, workload, workload_type) (
+                  label_replace(
+                    label_replace(
+                      kube_pod_owner{%(kubeStateMetricsSelector)s, owner_kind!~"%(knownManagedPodOwnerMatchers)s", owner_kind!="", owner_is_controller="true"},
+                      "workload", "$1", "owner_name", "(.+)"
+                    ),
+                    "workload_type", "$1", "owner_kind", "(.+)"
+                  )
+                )
+              ||| % ($._config { knownManagedPodOwnerMatchers: knownManagedPodOwnerMatchers })
+            ),
+          },
+          {
+            // workload aggregation for unknown job owner types (note: this includes cronjobs)
+            record: 'namespace_workload:kube_pods_ready:sum',
+            expr: readyPodsForWorkload(
+              |||
+                max by (%(clusterLabel)s, %(namespaceLabel)s, pod, workload, workload_type) (
+                  label_replace(
+                    label_replace(
+                      max by (%(clusterLabel)s, %(namespaceLabel)s, pod, job_name) (
+                        label_replace(
+                          kube_pod_owner{%(kubeStateMetricsSelector)s, owner_kind="Job", owner_is_controller="true"},
+                          "job_name", "$1", "owner_name", "(.+)"
+                        )
+                      )
+                      * on (%(clusterLabel)s, %(namespaceLabel)s, job_name) group_left (owner_kind, owner_name)
+                      max by (%(clusterLabel)s, %(namespaceLabel)s, job_name, owner_kind, owner_name) (
+                        kube_job_owner{%(kubeStateMetricsSelector)s, owner_kind!~"%(knownManagedJobOwnerMatchers)s", owner_kind!="", owner_is_controller="true"}
+                      ),
+                      "workload", "$1", "owner_name", "(.+)"
+                    ),
+                    "workload_type", "$1", "owner_kind", "(.+)"
+                  )
+                )
+              ||| % ($._config { knownManagedJobOwnerMatchers: knownManagedJobOwnerMatchers })
+            ),
           },
           {
             record: 'namespace_workload:kube_pods_phase:sum',
