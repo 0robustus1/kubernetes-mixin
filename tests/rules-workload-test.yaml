@@ -55,6 +55,10 @@ tests:
       values: '1 1'
     - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="api-abc",condition="true",job="kube-state-metrics",instance="ksm-2"}'
       values: '1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="api-def",owner_is_controller="true",owner_kind="ReplicaSet",owner_name="api-rs",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="api-def",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '0 0'
     - series: 'kube_pod_owner{cluster="test",namespace="default",pod="cache-abc",owner_is_controller="true",owner_kind="ReplicaSet",owner_name="cache",job="kube-state-metrics",instance="ksm-1"}'
       values: '1 1'
     - series: 'kube_replicaset_owner{cluster="test",namespace="default",replicaset="cache",owner_kind="",owner_name="",job="kube-state-metrics",instance="ksm-1"}'
@@ -112,6 +116,12 @@ tests:
       values: '1 1'
     - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="worker-abc",condition="true",job="kube-state-metrics",instance="ksm-1"}'
       values: '1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="rollout-abc",owner_is_controller="true",owner_kind="ReplicaSet",owner_name="rollout-rs",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_replicaset_owner{cluster="test",namespace="default",replicaset="rollout-rs",owner_kind="Rollout",owner_name="rollout",owner_is_controller="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="rollout-abc",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
 
     promql_expr_test:
     - eval_time: 1m
@@ -121,7 +131,34 @@ tests:
         value: 1
       - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="kafka",workload_type="StrimziPodSet"}'
         value: 1
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="rollout",workload_type="Rollout"}'
+        value: 1
       - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="worker",workload_type="job"}'
+        value: 1
+
+  # Preserve bare and static pod workloads without accepting non-controller owners.
+  - interval: 1m
+    input_series:
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="bare-pod",owner_is_controller="",owner_kind="",owner_name="",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="bare-pod",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="kube-system",pod="static-pod",owner_is_controller="true",owner_kind="Node",owner_name="node-1",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="kube-system",pod="static-pod",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="referenced-pod",owner_is_controller="false",owner_kind="ConfigMap",owner_name="pod-config",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="referenced-pod",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+
+    promql_expr_test:
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_ready:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="bare-pod",workload_type="barepod"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="kube-system",workload="static-pod",workload_type="staticpod"}'
         value: 1
 
   # Deduplicate standalone ReplicaSet metrics from redundant KSM instances.
