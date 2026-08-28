@@ -689,18 +689,36 @@
           },
         ] + [
           {
+            // There are a few cases that kube_pods_desired cannot really cover:
+            // * Custom Workloads (such as Rollouts, ...) as we do not know which metric would include the desired number of Pods.
+            // * Bare Pods, mostly because the desired number would always be 1
+            // * Static Pods, mostly because the desired number would always be 1
+            // * Pod owned Jobs (might own multiple Jobs)
             record: 'namespace_workload:kube_pods_desired:sum',
             expr: (
               |||
-                sum by (%(clusterLabel)s, %(namespaceLabel)s, workload, workload_type) (
-                 label_replace(label_replace(%(workloadMetric)s{%(kubeStateMetricsSelector)s},
+                topk by(%(clusterLabel)s, %(namespaceLabel)s, workload, workload_type)
+                 (1, sum by (%(clusterLabel)s, %(namespaceLabel)s, workload, workload_type) (
+                   label_replace(label_replace(
+                     topk by(%(clusterLabel)s, %(namespaceLabel)s, %(workloadLabel)s)
+                       (1, %(workloadMetric)s{%(kubeStateMetricsSelector)s}),
                      "workload", "$1", "%(workloadLabel)s", "(.+)"),
-                   "workload_type", "%(workloadType)s", "", "")
-                  * on (%(clusterLabel)s, %(namespaceLabel)s, workload, workload_type) group_right ()
-                  namespace_workload:kube_pod_owner:relabel
-                )
+                   "workload_type", "%(workloadType)s", "", ""))) %(noOwnerExpr)s
               |||
-            ) % ($._config + metricTuple),
+            ) % ($._config + {
+                ownershipCheckMetric: "",
+                ownershipCheckAdditionalSelectors: "",
+              } + metricTuple + {
+                noOwnerExpr: (if self.ownershipCheckMetric == '' then '' else (
+                  |||
+                    and on (%(clusterLabel)s, %(namespaceLabel)s, workload, workload_type)
+                    topk(1,
+                      label_replace(label_replace(%(ownershipCheckMetric)s{%(kubeStateMetricsSelector)s%(ownershipCheckAdditionalSelectors)s},
+                        "workload", "$1", "%(workloadLabel)s", "(.+)"),
+                      "workload_type", "%(workloadType)s", "", ""))
+                  ||| % self
+                ))
+              }),
             labels: {
               workload_type: metricTuple.workloadType
             },
@@ -717,11 +735,15 @@
             },
             {
               workloadMetric: "kube_job_spec_completions",
+              ownershipCheckMetric: "kube_job_owner",
+              ownershipCheckAdditionalSelectors: ', owner_kind=""',
               workloadLabel: "job_name",
               workloadType: workloadTypes.job,
             },
             {
               workloadMetric: "kube_replicaset_spec_replicas",
+              ownershipCheckMetric: "kube_replicaset_owner",
+              ownershipCheckAdditionalSelectors: ', owner_kind=""',
               workloadLabel: "replicaset",
               workloadType: workloadTypes.replicaSet,
             },
