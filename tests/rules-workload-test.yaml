@@ -35,17 +35,17 @@ tests:
     - eval_time: 1m
       expr: namespace_workload:kube_pod_owner:derived
       exp_samples:
-      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="controller-reference-daemonset",workload_type="daemonset"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="controller-reference-daemonset",workload_type="daemonset",workload_is_controller="true"}'
         value: 1
     - eval_time: 1m
       expr: namespace_workload:kube_pods_ready:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="controller-reference-daemonset",workload_type="daemonset"}'
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="controller-reference-daemonset",workload_type="daemonset",workload_is_controller="true"}'
         value: 1
     - eval_time: 1m
       expr: namespace_workload:kube_pods_phase:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="controller-reference-daemonset",workload_type="daemonset"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="controller-reference-daemonset",workload_type="daemonset",workload_is_controller="true"}'
         value: 1
 
   # Record ready pods for each built-in workload ownership path.
@@ -118,41 +118,41 @@ tests:
     - eval_time: 1m
       expr: namespace_workload:kube_pod_owner:derived
       exp_samples:
-      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="standalone-replicaset",workload_type="replicaset"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="standalone-replicaset",workload_type="replicaset",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="statefulset",workload_type="statefulset"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="statefulset",workload_type="statefulset",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="pod-owned-job",workload_type="pod"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="pod-owned-job",workload_type="pod",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="standalone-job",workload_type="job"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="standalone-job",workload_type="job",workload_is_controller="true"}'
         value: 1
     - eval_time: 1m
       expr: namespace_workload:kube_pods_ready:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="standalone-replicaset",workload_type="replicaset"}'
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="standalone-replicaset",workload_type="replicaset",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="statefulset",workload_type="statefulset"}'
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="statefulset",workload_type="statefulset",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="standalone-job",workload_type="job"}'
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="standalone-job",workload_type="job",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="pod-owned-job",workload_type="pod"}'
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="pod-owned-job",workload_type="pod",workload_is_controller="true"}'
         value: 1
     - eval_time: 1m
       expr: namespace_workload:kube_pods_phase:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Pending",workload="standalone-replicaset",workload_type="replicaset"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Pending",workload="standalone-replicaset",workload_type="replicaset",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="statefulset",workload_type="statefulset"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="statefulset",workload_type="statefulset",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="pod-owned-job",workload_type="pod"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="pod-owned-job",workload_type="pod",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Succeeded",workload="standalone-job",workload_type="job"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Succeeded",workload="standalone-job",workload_type="job",workload_is_controller="true"}'
         value: 1
 
   # Record ready pods for custom controllers and Jobs without a controller owner.
@@ -217,37 +217,37 @@ tests:
     - eval_time: 1m
       expr: namespace_workload:kube_pod_owner:derived
       exp_samples:
-      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="custom-job-controller",workload_type="CronJob"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="custom-job-controller",workload_type="CronJob",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="custom-pod-controller",workload_type="StrimziPodSet"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="custom-pod-controller",workload_type="StrimziPodSet",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="custom-replicaset-controller",workload_type="Rollout"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="custom-replicaset-controller",workload_type="Rollout",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="job-with-non-controller-owner",workload_type="job"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="job-with-non-controller-owner",workload_type="job",workload_is_controller="true"}'
         value: 1
     - eval_time: 1m
       expr: namespace_workload:kube_pods_ready:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="custom-job-controller",workload_type="CronJob"}'
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="custom-job-controller",workload_type="CronJob",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="custom-pod-controller",workload_type="StrimziPodSet"}'
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="custom-pod-controller",workload_type="StrimziPodSet",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="custom-replicaset-controller",workload_type="Rollout"}'
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="custom-replicaset-controller",workload_type="Rollout",workload_is_controller="true"}'
         value: 2
-      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="job-with-non-controller-owner",workload_type="job"}'
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="job-with-non-controller-owner",workload_type="job",workload_is_controller="true"}'
         value: 1
     - eval_time: 1m
       expr: namespace_workload:kube_pods_phase:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="custom-job-controller",workload_type="CronJob"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="custom-job-controller",workload_type="CronJob",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="custom-pod-controller",workload_type="StrimziPodSet"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="custom-pod-controller",workload_type="StrimziPodSet",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="custom-replicaset-controller",workload_type="Rollout"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="custom-replicaset-controller",workload_type="Rollout",workload_is_controller="true"}'
         value: 2
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="job-with-non-controller-owner",workload_type="job"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="job-with-non-controller-owner",workload_type="job",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Succeeded",workload="custom-job-controller",workload_type="CronJob"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Succeeded",workload="custom-job-controller",workload_type="CronJob",workload_is_controller="true"}'
         value: 1
     - eval_time: 1m
       expr: namespace_workload:kube_pods_desired:sum{workload=~"custom-job-controller.*|custom-replicaset-controller.*"}
@@ -276,23 +276,23 @@ tests:
     - eval_time: 1m
       expr: namespace_workload:kube_pod_owner:derived
       exp_samples:
-      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="bare-pod",workload_type="barepod"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="bare-pod",workload_type="barepod",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="kube-system",workload="static-pod",workload_type="staticpod"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="kube-system",workload="static-pod",workload_type="staticpod",workload_is_controller="true"}'
         value: 1
     - eval_time: 1m
       expr: namespace_workload:kube_pods_ready:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="bare-pod",workload_type="barepod"}'
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="bare-pod",workload_type="barepod",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="kube-system",workload="static-pod",workload_type="staticpod"}'
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="kube-system",workload="static-pod",workload_type="staticpod",workload_is_controller="true"}'
         value: 1
     - eval_time: 1m
       expr: namespace_workload:kube_pods_phase:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="bare-pod",workload_type="barepod"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="bare-pod",workload_type="barepod",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="kube-system",phase="Running",workload="static-pod",workload_type="staticpod"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="kube-system",phase="Running",workload="static-pod",workload_type="staticpod",workload_is_controller="true"}'
         value: 1
 
   # Aggregate all pod phases without double-counting redundant KSM producers.
@@ -373,22 +373,22 @@ tests:
     - eval_time: 1m
       expr: namespace_workload:kube_pod_owner:derived
       exp_samples:
-      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="lifecycle-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 1
     - eval_time: 0m
       expr: namespace_workload:kube_pods_ready:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="lifecycle-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 1
     - eval_time: 1m
       expr: namespace_workload:kube_pods_ready:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="lifecycle-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 2
     - eval_time: 2m
       expr: namespace_workload:kube_pods_ready:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="lifecycle-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 1
     - eval_time: 1m
       expr: namespace_workload:kube_pods_desired:sum
@@ -398,41 +398,41 @@ tests:
     - eval_time: 0m
       expr: namespace_workload:kube_pods_phase:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Failed",workload="lifecycle-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Failed",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Pending",workload="lifecycle-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Pending",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="lifecycle-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Succeeded",workload="lifecycle-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Succeeded",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 0
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Unknown",workload="lifecycle-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Unknown",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 0
     - eval_time: 1m
       expr: namespace_workload:kube_pods_phase:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Failed",workload="lifecycle-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Failed",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 0
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Pending",workload="lifecycle-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Pending",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 0
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="lifecycle-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 2
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Succeeded",workload="lifecycle-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Succeeded",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 0
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Unknown",workload="lifecycle-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Unknown",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 1
     - eval_time: 2m
       expr: namespace_workload:kube_pods_phase:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Failed",workload="lifecycle-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Failed",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 0
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Pending",workload="lifecycle-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Pending",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 0
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="lifecycle-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Succeeded",workload="lifecycle-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Succeeded",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Unknown",workload="lifecycle-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Unknown",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 1
 
   # Keep conflicting controller kinds evaluable as independent workload series.
@@ -449,9 +449,9 @@ tests:
     - eval_time: 1m
       expr: namespace_workload:kube_pods_phase:sum{cluster="test",namespace="conflict",phase="Running"}
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="conflict",phase="Running",workload="conflicting-controller-daemonset",workload_type="daemonset"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="conflict",phase="Running",workload="conflicting-controller-daemonset",workload_type="daemonset",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="conflict",phase="Running",workload="conflicting-controller-statefulset",workload_type="statefulset"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="conflict",phase="Running",workload="conflicting-controller-statefulset",workload_type="statefulset",workload_is_controller="true"}'
         value: 1
 
   # Keep identical pod and workload names isolated by cluster and namespace.
@@ -482,23 +482,23 @@ tests:
     - eval_time: 1m
       expr: namespace_workload:kube_pod_owner:derived
       exp_samples:
-      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="cluster-a",namespace="ns-a",workload="isolated-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="cluster-a",namespace="ns-a",workload="isolated-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="cluster-b",namespace="ns-b",workload="isolated-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="cluster-b",namespace="ns-b",workload="isolated-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 1
     - eval_time: 1m
       expr: namespace_workload:kube_pods_ready:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="cluster-a",namespace="ns-a",workload="isolated-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="cluster-a",namespace="ns-a",workload="isolated-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="cluster-b",namespace="ns-b",workload="isolated-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="cluster-b",namespace="ns-b",workload="isolated-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 0
     - eval_time: 1m
       expr: namespace_workload:kube_pods_phase:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="cluster-a",namespace="ns-a",phase="Running",workload="isolated-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="cluster-a",namespace="ns-a",phase="Running",workload="isolated-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="cluster-b",namespace="ns-b",phase="Pending",workload="isolated-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="cluster-b",namespace="ns-b",phase="Pending",workload="isolated-deployment",workload_type="deployment",workload_is_controller="true"}'
         value: 1
     - eval_time: 1m
       expr: namespace_workload:kube_pods_desired:sum
@@ -524,53 +524,53 @@ tests:
     - eval_time: 0m
       expr: namespace_workload:kube_pod_owner:derived
       exp_samples:
-      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="transition",workload="ownership-transition-daemonset",workload_type="daemonset"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="transition",workload="ownership-transition-daemonset",workload_type="daemonset",workload_is_controller="true"}'
         value: 1
     - eval_time: 1m
       expr: namespace_workload:kube_pod_owner:derived
       exp_samples:
-      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="transition",workload="ownership-transition-statefulset",workload_type="statefulset"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="transition",workload="ownership-transition-statefulset",workload_type="statefulset",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="transition",workload="ownership-transition-daemonset",workload_type="daemonset"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="transition",workload="ownership-transition-daemonset",workload_type="daemonset",workload_is_controller="true"}'
         value: 1
     - eval_time: 2m
       expr: namespace_workload:kube_pod_owner:derived
       exp_samples:
-      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="transition",workload="ownership-transition-statefulset",workload_type="statefulset"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="transition",workload="ownership-transition-statefulset",workload_type="statefulset",workload_is_controller="true"}'
         value: 1
     - eval_time: 0m
       expr: namespace_workload:kube_pods_ready:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="transition",workload="ownership-transition-daemonset",workload_type="daemonset"}'
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="transition",workload="ownership-transition-daemonset",workload_type="daemonset",workload_is_controller="true"}'
         value: 1
     - eval_time: 1m
       expr: namespace_workload:kube_pods_ready:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="transition",workload="ownership-transition-statefulset",workload_type="statefulset"}'
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="transition",workload="ownership-transition-statefulset",workload_type="statefulset",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="transition",workload="ownership-transition-daemonset",workload_type="daemonset"}'
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="transition",workload="ownership-transition-daemonset",workload_type="daemonset",workload_is_controller="true"}'
         value: 1
     - eval_time: 2m
       expr: namespace_workload:kube_pods_ready:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="transition",workload="ownership-transition-statefulset",workload_type="statefulset"}'
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="transition",workload="ownership-transition-statefulset",workload_type="statefulset",workload_is_controller="true"}'
         value: 1
     - eval_time: 0m
       expr: namespace_workload:kube_pods_phase:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="transition",phase="Running",workload="ownership-transition-daemonset",workload_type="daemonset"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="transition",phase="Running",workload="ownership-transition-daemonset",workload_type="daemonset",workload_is_controller="true"}'
         value: 1
     - eval_time: 1m
       expr: namespace_workload:kube_pods_phase:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="transition",phase="Running",workload="ownership-transition-statefulset",workload_type="statefulset"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="transition",phase="Running",workload="ownership-transition-statefulset",workload_type="statefulset",workload_is_controller="true"}'
         value: 1
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="transition",phase="Running",workload="ownership-transition-daemonset",workload_type="daemonset"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="transition",phase="Running",workload="ownership-transition-daemonset",workload_type="daemonset",workload_is_controller="true"}'
         value: 1
     - eval_time: 2m
       expr: namespace_workload:kube_pods_phase:sum
       exp_samples:
-      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="transition",phase="Running",workload="ownership-transition-statefulset",workload_type="statefulset"}'
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="transition",phase="Running",workload="ownership-transition-statefulset",workload_type="statefulset",workload_is_controller="true"}'
         value: 1
 
   # Deduplicate standalone ReplicaSet metrics from redundant KSM instances.
@@ -593,7 +593,7 @@ tests:
     - eval_time: 1m
       expr: namespace_workload:kube_pod_owner:derived
       exp_samples:
-      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="deduplicated-standalone-replicaset",workload_type="replicaset"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="deduplicated-standalone-replicaset",workload_type="replicaset",workload_is_controller="true"}'
         value: 1
 
   # Record desired pods for every supported workload type.
