@@ -734,7 +734,7 @@
                  (1, sum by (%(clusterLabel)s, %(namespaceLabel)s, workload, workload_type) (
                    label_replace(label_replace(
                      topk by(%(clusterLabel)s, %(namespaceLabel)s, %(workloadLabel)s)
-                       (1, %(workloadMetric)s{%(kubeStateMetricsSelector)s}),
+                       (1, (%(workloadMetricQuery)s)),
                      "workload", "$1", "%(workloadLabel)s", "(.+)"),
                    "workload_type", "%(workloadType)s", "", ""))) %(noOwnerExpr)s
               |||
@@ -758,31 +758,40 @@
           }
           for metricTuple in [
             {
-              workloadMetric: 'kube_daemonset_status_desired_number_scheduled',
+              workloadMetricQuery: 'kube_daemonset_status_desired_number_scheduled',
               workloadLabel: 'daemonset',
               workloadType: workloadTypes.daemonSet,
             },
             {
               workloadMetric: 'kube_deployment_spec_replicas',
+              workloadMetricQuery: (
+                |||
+                  max by(%(clusterLabel)s, %(namespaceLabel)s, deployment) (
+                    label_replace(kube_deployment_spec_replicas{%(kubeStateMetricsSelector)s}, "deployment_original", "true", "", "")
+                    or
+                    label_replace(
+                      (
+                        kube_replicaset_owner{%(kubeStateMetricsSelector)s, owner_kind="Deployment"}
+                        * on(%(clusterLabel)s, %(namespaceLabel)s, replicaset) group_left()
+                        kube_replicaset_spec_replicas{%(kubeStateMetricsSelector)s}
+                      ),
+                      "deployment", "$1", "owner_name", "(.+)"
+                    )
+                  )
+                ||| % $._config
+              ),
               workloadLabel: 'deployment',
               workloadType: workloadTypes.deployment,
             },
             {
-              workloadMetric: 'kube_job_spec_completions',
-              ownershipCheckMetric: 'kube_job_owner',
-              ownershipCheckAdditionalSelectors: ', owner_kind=""',
-              workloadLabel: 'job_name',
-              workloadType: workloadTypes.job,
-            },
-            {
-              workloadMetric: 'kube_replicaset_spec_replicas',
+              workloadMetricQuery: 'kube_replicaset_spec_replicas',
               ownershipCheckMetric: 'kube_replicaset_owner',
               ownershipCheckAdditionalSelectors: ', owner_kind=""',
               workloadLabel: 'replicaset',
               workloadType: workloadTypes.replicaSet,
             },
             {
-              workloadMetric: 'kube_statefulset_replicas',
+              workloadMetricQuery: 'kube_statefulset_replicas',
               workloadLabel: 'statefulset',
               workloadType: workloadTypes.statefulSet,
             },
