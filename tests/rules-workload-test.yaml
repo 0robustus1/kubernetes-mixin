@@ -33,9 +33,9 @@ tests:
 
     promql_expr_test:
     - eval_time: 1m
-      expr: namespace_workload:kube_pod_owner:relabel
+      expr: namespace_workload:kube_pod_owner:derived
       exp_samples:
-      - labels: 'namespace_workload:kube_pod_owner:relabel{cluster="test",namespace="default",workload="controller-reference-daemonset",workload_type="daemonset"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="controller-reference-daemonset",workload_type="daemonset"}'
         value: 1
     - eval_time: 1m
       expr: namespace_workload:kube_pods_ready:sum
@@ -116,17 +116,17 @@ tests:
 
     promql_expr_test:
     - eval_time: 1m
-      expr: namespace_workload:kube_pod_owner:relabel
+      expr: namespace_workload:kube_pod_owner:derived
       exp_samples:
-      - labels: 'namespace_workload:kube_pod_owner:relabel{cluster="test",namespace="default",workload="deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="deployment",workload_type="deployment"}'
         value: 1
-      - labels: 'namespace_workload:kube_pod_owner:relabel{cluster="test",namespace="default",workload="standalone-replicaset",workload_type="replicaset"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="standalone-replicaset",workload_type="replicaset"}'
         value: 1
-      - labels: 'namespace_workload:kube_pod_owner:relabel{cluster="test",namespace="default",workload="statefulset",workload_type="statefulset"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="statefulset",workload_type="statefulset"}'
         value: 1
-      - labels: 'namespace_workload:kube_pod_owner:relabel{cluster="test",namespace="default",workload="pod-owned-job",workload_type="pod"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="pod-owned-job",workload_type="pod"}'
         value: 1
-      - labels: 'namespace_workload:kube_pod_owner:relabel{cluster="test",namespace="default",workload="standalone-job",workload_type="job"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="standalone-job",workload_type="job"}'
         value: 1
     - eval_time: 1m
       expr: namespace_workload:kube_pods_ready:sum
@@ -215,15 +215,15 @@ tests:
 
     promql_expr_test:
     - eval_time: 1m
-      expr: namespace_workload:kube_pod_owner:relabel
+      expr: namespace_workload:kube_pod_owner:derived
       exp_samples:
-      - labels: 'namespace_workload:kube_pod_owner:relabel{cluster="test",namespace="default",workload="custom-job-controller",workload_type="CronJob"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="custom-job-controller",workload_type="CronJob"}'
         value: 1
-      - labels: 'namespace_workload:kube_pod_owner:relabel{cluster="test",namespace="default",workload="custom-pod-controller",workload_type="StrimziPodSet"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="custom-pod-controller",workload_type="StrimziPodSet"}'
         value: 1
-      - labels: 'namespace_workload:kube_pod_owner:relabel{cluster="test",namespace="default",workload="custom-replicaset-controller",workload_type="Rollout"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="custom-replicaset-controller",workload_type="Rollout"}'
         value: 1
-      - labels: 'namespace_workload:kube_pod_owner:relabel{cluster="test",namespace="default",workload="job-with-non-controller-owner",workload_type="job"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="job-with-non-controller-owner",workload_type="job"}'
         value: 1
     - eval_time: 1m
       expr: namespace_workload:kube_pods_ready:sum
@@ -274,11 +274,11 @@ tests:
 
     promql_expr_test:
     - eval_time: 1m
-      expr: namespace_workload:kube_pod_owner:relabel
+      expr: namespace_workload:kube_pod_owner:derived
       exp_samples:
-      - labels: 'namespace_workload:kube_pod_owner:relabel{cluster="test",namespace="default",workload="bare-pod",workload_type="barepod"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="bare-pod",workload_type="barepod"}'
         value: 1
-      - labels: 'namespace_workload:kube_pod_owner:relabel{cluster="test",namespace="kube-system",workload="static-pod",workload_type="staticpod"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="kube-system",workload="static-pod",workload_type="staticpod"}'
         value: 1
     - eval_time: 1m
       expr: namespace_workload:kube_pods_ready:sum
@@ -371,9 +371,9 @@ tests:
 
     promql_expr_test:
     - eval_time: 1m
-      expr: namespace_workload:kube_pod_owner:relabel
+      expr: namespace_workload:kube_pod_owner:derived
       exp_samples:
-      - labels: 'namespace_workload:kube_pod_owner:relabel{cluster="test",namespace="default",workload="lifecycle-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="lifecycle-deployment",workload_type="deployment"}'
         value: 1
     - eval_time: 0m
       expr: namespace_workload:kube_pods_ready:sum
@@ -480,11 +480,11 @@ tests:
 
     promql_expr_test:
     - eval_time: 1m
-      expr: namespace_workload:kube_pod_owner:relabel
+      expr: namespace_workload:kube_pod_owner:derived
       exp_samples:
-      - labels: 'namespace_workload:kube_pod_owner:relabel{cluster="cluster-a",namespace="ns-a",workload="isolated-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="cluster-a",namespace="ns-a",workload="isolated-deployment",workload_type="deployment"}'
         value: 1
-      - labels: 'namespace_workload:kube_pod_owner:relabel{cluster="cluster-b",namespace="ns-b",workload="isolated-deployment",workload_type="deployment"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="cluster-b",namespace="ns-b",workload="isolated-deployment",workload_type="deployment"}'
         value: 1
     - eval_time: 1m
       expr: namespace_workload:kube_pods_ready:sum
@@ -522,21 +522,21 @@ tests:
 
     promql_expr_test:
     - eval_time: 0m
-      expr: namespace_workload:kube_pod_owner:relabel
+      expr: namespace_workload:kube_pod_owner:derived
       exp_samples:
-      - labels: 'namespace_workload:kube_pod_owner:relabel{cluster="test",namespace="transition",workload="ownership-transition-daemonset",workload_type="daemonset"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="transition",workload="ownership-transition-daemonset",workload_type="daemonset"}'
         value: 1
     - eval_time: 1m
-      expr: namespace_workload:kube_pod_owner:relabel
+      expr: namespace_workload:kube_pod_owner:derived
       exp_samples:
-      - labels: 'namespace_workload:kube_pod_owner:relabel{cluster="test",namespace="transition",workload="ownership-transition-statefulset",workload_type="statefulset"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="transition",workload="ownership-transition-statefulset",workload_type="statefulset"}'
         value: 1
-      - labels: 'namespace_workload:kube_pod_owner:relabel{cluster="test",namespace="transition",workload="ownership-transition-daemonset",workload_type="daemonset"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="transition",workload="ownership-transition-daemonset",workload_type="daemonset"}'
         value: 1
     - eval_time: 2m
-      expr: namespace_workload:kube_pod_owner:relabel
+      expr: namespace_workload:kube_pod_owner:derived
       exp_samples:
-      - labels: 'namespace_workload:kube_pod_owner:relabel{cluster="test",namespace="transition",workload="ownership-transition-statefulset",workload_type="statefulset"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="transition",workload="ownership-transition-statefulset",workload_type="statefulset"}'
         value: 1
     - eval_time: 0m
       expr: namespace_workload:kube_pods_ready:sum
@@ -591,9 +591,9 @@ tests:
 
     promql_expr_test:
     - eval_time: 1m
-      expr: namespace_workload:kube_pod_owner:relabel
+      expr: namespace_workload:kube_pod_owner:derived
       exp_samples:
-      - labels: 'namespace_workload:kube_pod_owner:relabel{cluster="test",namespace="default",workload="deduplicated-standalone-replicaset",workload_type="replicaset"}'
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="deduplicated-standalone-replicaset",workload_type="replicaset"}'
         value: 1
 
   # Record desired pods for every supported workload type.
@@ -620,7 +620,7 @@ tests:
 
     promql_expr_test:
     - eval_time: 1m
-      expr: namespace_workload:kube_pod_owner:relabel
+      expr: namespace_workload:kube_pod_owner:derived
     - eval_time: 1m
       expr: namespace_workload:kube_pods_ready:sum
     - eval_time: 1m
@@ -664,7 +664,7 @@ tests:
 
     promql_expr_test:
     - eval_time: 1m
-      expr: namespace_workload:kube_pod_owner:relabel
+      expr: namespace_workload:kube_pod_owner:derived
     - eval_time: 1m
       expr: namespace_workload:kube_pods_ready:sum
     - eval_time: 1m
@@ -712,7 +712,7 @@ tests:
 
     promql_expr_test:
     - eval_time: 1m
-      expr: namespace_workload:kube_pod_owner:relabel
+      expr: namespace_workload:kube_pod_owner:derived
     - eval_time: 1m
       expr: namespace_workload:kube_pods_desired:sum
       exp_samples:
@@ -729,7 +729,7 @@ tests:
 
     promql_expr_test:
     - eval_time: 1m
-      expr: namespace_workload:kube_pod_owner:relabel
+      expr: namespace_workload:kube_pod_owner:derived
     - eval_time: 1m
       expr: namespace_workload:kube_pods_desired:sum
       exp_samples:
