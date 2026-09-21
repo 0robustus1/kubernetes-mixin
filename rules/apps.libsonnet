@@ -631,7 +631,7 @@
         ||| % $._config,
         rules: [
           {
-            record: 'namespace_workload:kube_pod_owner:relabel',
+            record: 'namespace_workload:kube_pod_owner:derived',
             expr: (
               |||
                 max by (%(clusterLabel)s, %(namespaceLabel)s, workload) (%(workloadExpr)s)
@@ -648,7 +648,7 @@
           for i in std.range(0, std.length(fixedPodWorkloadTypes) - 1)
         ] + [
           {
-            record: 'namespace_workload:kube_pod_owner:relabel',
+            record: 'namespace_workload:kube_pod_owner:derived',
             expr: (
               |||
                 max by (%(clusterLabel)s, %(namespaceLabel)s, workload, workload_type) (%(workloadExpr)s)
