@@ -416,8 +416,6 @@
           else
             downcaseWorkloadTypes
         ),
-        local knownManagedPodOwnerMatchers = '%(daemonSet)s|%(deployment)s|%(job)s|%(replicaSet)s|%(statefulSet)s' % pascalCaseWorkloadTypes,
-        local knownManagedJobOwnerMatchers = '%(pod)s' % pascalCaseWorkloadTypes,
         local podsForWorkload(podMetricExpr, extraGroupLabels, workloadExpr, dynamicWorkloadType=false) = (
           |||
             sum by (%(clusterLabel)s, %(namespaceLabel)s, workload, workload_is_controller%(workloadTypeLabel)s%(extraGroupLabels)s) (
@@ -641,7 +639,7 @@
                   topk by (%(clusterLabel)s, %(namespaceLabel)s, job_name, owner_is_controller) (
                     1,
                     max by (%(clusterLabel)s, %(namespaceLabel)s, job_name, owner_kind, owner_name, owner_is_controller) (
-                      kube_job_owner{%(kubeStateMetricsSelector)s, owner_kind!~"%(knownManagedJobOwnerMatchers)s", owner_kind!="", owner_is_controller="true"}
+                      kube_job_owner{%(kubeStateMetricsSelector)s, owner_kind!="Pod", owner_kind!="", owner_is_controller="true"}
                     )
                   ),
                   "workload", "$1", "owner_name", "(.+)"),
@@ -649,7 +647,7 @@
                 "workload_is_controller", "$1", "owner_is_controller", "(.+)"
               )
             )
-          ||| % ($._config { knownManagedJobOwnerMatchers: knownManagedJobOwnerMatchers }),
+          ||| % $._config,
         ],
         local customPodWorkloadExpr = std.join('\nOR\n', [podWorkloadExprs[i] for i in std.range(8, 10)]),
         local readyPodMetricExpr = |||
