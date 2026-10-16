@@ -27,6 +27,7 @@ MARKDOWNFMT_BIN=$(BIN_DIR)/markdownfmt
 VALE_BIN=$(BIN_DIR)/vale
 PROMTOOL_BIN=$(BIN_DIR)/promtool
 PINT_BIN=$(BIN_DIR)/pint
+RULEVALIDATION_BIN=$(BIN_DIR)/rulevalidation
 TOOLING=$(JB_BIN) $(JSONNETLINT_BIN) $(JSONNET_BIN) $(JSONNETFMT_BIN) $(PROMTOOL_BIN) $(MARKDOWNFMT_BIN) $(VALE_BIN) $(PINT_BIN)
 NPROC ?= $(shell nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 4)
 JSONNETFMT_ARGS=-n 2 --max-blank-lines 2 --string-style s --comment-style s
@@ -96,7 +97,7 @@ $(JSONNET_VENDOR): $(JB_BIN) jsonnetfile.json
 	$(JB_BIN) install
 
 .PHONY: fmt
-fmt: jsonnet-fmt markdownfmt
+fmt: jsonnet-fmt markdownfmt rulevalidation-fmt
 
 .PHONY: jsonnet-fmt
 jsonnet-fmt: $(JSONNETFMT_BIN)
@@ -106,6 +107,14 @@ jsonnet-fmt: $(JSONNETFMT_BIN)
 .PHONY: markdownfmt
 markdownfmt: $(MARKDOWNFMT_BIN)
 	@for file in $(MD_FILES); do $(MARKDOWNFMT_BIN) -w -gofmt $$file; done
+
+.PHONY: rulevalidation-fmt
+rulevalidation-fmt:
+	@cd rulevalidation && gofmt -w *.go
+
+.PHONY: rulevalidation-fmt-check
+rulevalidation-fmt-check:
+	@test -z "$$(gofmt -l rulevalidation/*.go)"
 
 prometheus_alerts.yaml: $(JSONNET_BIN) mixin.libsonnet lib/alerts.jsonnet alerts/*.libsonnet
 	@$(JSONNET_BIN) -J vendor -S lib/alerts.jsonnet > $@
@@ -165,8 +174,20 @@ config-test: $(JSONNET_BIN) $(JSONNET_VENDOR)
 	@$(JSONNET_BIN) -J vendor tests/config-test.jsonnet > /dev/null
 
 .PHONY: test
-test: $(PROMTOOL_BIN) config-test prometheus_alerts.yaml prometheus_rules.yaml
+test: $(PROMTOOL_BIN) config-test prometheus_alerts.yaml prometheus_rules.yaml rulevalidation-test
 	@$(PROMTOOL_BIN) test rules tests/*.yaml
+
+.PHONY: rulevalidation-test
+rulevalidation-test:
+	@cd rulevalidation && go test ./...
+
+.PHONY: rulevalidation
+rulevalidation: $(RULEVALIDATION_BIN)
+
+RULEVALIDATION_SOURCES=$(wildcard rulevalidation/*.go) rulevalidation/go.mod rulevalidation/go.sum
+
+$(RULEVALIDATION_BIN): $(RULEVALIDATION_SOURCES) | $(BIN_DIR)
+	@cd rulevalidation && go build -o $@ .
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
