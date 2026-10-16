@@ -68,7 +68,9 @@ GCX can also resolve the datasource from its selected context. Use
 
 ## Evaluation behavior
 
-- `--group` performs an exact match and can be repeated. Without it, all
+- `--group` accepts an exact group name or an anchored glob and can be repeated.
+  In a glob, `*` matches one or more characters and every other character is
+  literal; for example, `--group 'kube-*.rules'`. Without `--group`, all
   rendered groups run.
 - `--time` accepts RFC3339 or Unix timestamps. If omitted or set to `now`, the
   tool captures one current timestamp and passes it to every query.

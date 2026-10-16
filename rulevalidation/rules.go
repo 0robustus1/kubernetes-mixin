@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -132,19 +133,39 @@ func validateRules(document rulesDocument) error {
 }
 
 func selectGroups(groups []ruleGroup, requested []string, fallbackInterval time.Duration) ([]selectedGroup, error) {
-	requestedSet := make(map[string]struct{}, len(requested))
-	for _, name := range requested {
-		requestedSet[name] = struct{}{}
+	type groupSelector struct {
+		pattern    string
+		expression *regexp.Regexp
+		matched    bool
+	}
+
+	selectors := make([]groupSelector, 0, len(requested))
+	seenSelectors := make(map[string]struct{}, len(requested))
+	for _, pattern := range requested {
+		if _, seen := seenSelectors[pattern]; seen {
+			continue
+		}
+		seenSelectors[pattern] = struct{}{}
+		expression := "^" + strings.ReplaceAll(regexp.QuoteMeta(pattern), `\*`, ".+") + "$"
+		selectors = append(selectors, groupSelector{
+			pattern:    pattern,
+			expression: regexp.MustCompile(expression),
+		})
 	}
 
 	selected := make([]selectedGroup, 0, len(groups))
-	found := make(map[string]struct{}, len(requestedSet))
 	for _, group := range groups {
-		if len(requestedSet) > 0 {
-			if _, wanted := requestedSet[group.Name]; !wanted {
+		if len(selectors) > 0 {
+			wanted := false
+			for index := range selectors {
+				if selectors[index].expression.MatchString(group.Name) {
+					selectors[index].matched = true
+					wanted = true
+				}
+			}
+			if !wanted {
 				continue
 			}
-			found[group.Name] = struct{}{}
 		}
 
 		interval := fallbackInterval
@@ -177,13 +198,13 @@ func selectGroups(groups []ruleGroup, requested []string, fallbackInterval time.
 		})
 	}
 
-	if len(requestedSet) > len(found) {
-		missing := make([]string, 0, len(requestedSet)-len(found))
-		for name := range requestedSet {
-			if _, ok := found[name]; !ok {
-				missing = append(missing, name)
-			}
+	missing := make([]string, 0, len(selectors))
+	for _, selector := range selectors {
+		if !selector.matched {
+			missing = append(missing, selector.pattern)
 		}
+	}
+	if len(missing) > 0 {
 		sort.Strings(missing)
 		return nil, fmt.Errorf("requested groups were not rendered: %s", strings.Join(missing, ", "))
 	}

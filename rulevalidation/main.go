@@ -35,7 +35,7 @@ const (
 type cli struct {
 	Config             string        `help:"Customized mixin entrypoint to render." required:"" type:"existingfile"`
 	JPath              []string      `help:"Jsonnet import path. May be repeated." default:"vendor" sep:"none"`
-	Group              []string      `help:"Exact rule group name to execute. May be repeated." sep:"none"`
+	Group              []string      `help:"Rule group name or anchored glob to execute. '*' matches one or more characters. May be repeated." sep:"none"`
 	Time               string        `help:"Evaluation time as RFC3339 or a Unix timestamp. Defaults to one shared current time."`
 	GroupTimeout       time.Duration `help:"Per-query timeout and cumulative group timeout budget." default:"1m"`
 	EvaluationInterval time.Duration `help:"Interval for groups that do not declare one." default:"1m"`

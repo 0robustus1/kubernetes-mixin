@@ -93,12 +93,43 @@ func TestSelectGroupsPreservesRenderedOrderAndUsesIntervals(t *testing.T) {
 	}
 }
 
-func TestSelectGroupsRejectsMissingName(t *testing.T) {
+func TestSelectGroupsSupportsAnchoredGlobSelectors(t *testing.T) {
 	t.Parallel()
 
-	_, err := selectGroups([]ruleGroup{{Name: "present"}}, []string{"missing"}, time.Minute)
-	if err == nil || !strings.Contains(err.Error(), "missing") {
-		t.Fatalf("selectGroups() error = %v, want missing group error", err)
+	groups := []ruleGroup{
+		{Name: "api.rules."},
+		{Name: "api.rules.node"},
+		{Name: "prefix-api.rules.node"},
+		{Name: "apiXrules.node"},
+		{Name: "api.rules.node.slo"},
+		{Name: "api+rules.[]"},
+		{Name: "api+rules.[node]"},
+	}
+	selected, err := selectGroups(
+		groups,
+		[]string{"api.rules.*", "api.rules.node", "api+rules.[*]", "api.rules.*"},
+		time.Minute,
+	)
+	if err != nil {
+		t.Fatalf("selectGroups() error = %v", err)
+	}
+
+	got := make([]string, 0, len(selected))
+	for _, group := range selected {
+		got = append(got, group.Name)
+	}
+	want := []string{"api.rules.node", "api.rules.node.slo", "api+rules.[node]"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("selected groups = %#v, want %#v", got, want)
+	}
+}
+
+func TestSelectGroupsRejectsUnmatchedSelector(t *testing.T) {
+	t.Parallel()
+
+	_, err := selectGroups([]ruleGroup{{Name: "present-one"}}, []string{"present*", "missing*"}, time.Minute)
+	if err == nil || !strings.Contains(err.Error(), "missing*") {
+		t.Fatalf("selectGroups() error = %v, want unmatched selector error", err)
 	}
 }
 

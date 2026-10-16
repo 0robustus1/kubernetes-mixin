@@ -44,7 +44,7 @@ func TestRunCLIUsesInjectedExecutors(t *testing.T) {
 	var stderr bytes.Buffer
 	exitCode := runCLI([]string{
 		"--config", config,
-		"--group", "selected",
+		"--group", "select*",
 		"--time", "2026-10-16T12:00:00Z",
 		"--jsonnet-binary", "fake-jsonnet",
 		"promtool",
