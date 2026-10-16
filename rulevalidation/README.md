@@ -96,6 +96,10 @@ included. `TIMEOUT USED` reports the individual query's percentage of the
 group timeout, while `CUMULATIVE TIMEOUT USED` reports the percentage consumed
 by that rule and all preceding rules in the group.
 
+Query error details are prefixed with explicit rule and label fields, for
+example `ERROR: rule=example:metric labels={variant="one"}: <message>`. Rules
+without static labels use `labels=-`.
+
 Instant-query commands do not write recording-rule results back to the
 datasource. Later rules therefore see only series that already exist in the
 datasource, not the temporary output of earlier validation queries.

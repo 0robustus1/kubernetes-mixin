@@ -226,7 +226,13 @@ func writeReport(output io.Writer, groups []groupResult) {
 				rule.CumulativeTimeoutPercent,
 			)
 			if rule.Error != "" {
-				fmt.Fprintf(writer, "\tERROR: %s\n", strings.ReplaceAll(rule.Error, "\n", " "))
+				fmt.Fprintf(
+					writer,
+					"\tERROR: rule=%s labels=%s: %s\n",
+					rule.Name,
+					formatStaticLabels(rule.StaticLabels),
+					singleLineErrorText(rule.Error),
+				)
 			}
 		}
 
@@ -253,6 +259,10 @@ func writeReport(output io.Writer, groups []groupResult) {
 		}
 	}
 	_ = writer.Flush()
+}
+
+func singleLineErrorText(value string) string {
+	return strings.Join(strings.Fields(value), " ")
 }
 
 func formatDuration(duration time.Duration) string {

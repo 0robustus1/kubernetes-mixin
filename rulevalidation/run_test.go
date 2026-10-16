@@ -226,18 +226,36 @@ func TestWriteReportIncludesRuleAndGroupMetrics(t *testing.T) {
 			Name: "rule", StaticLabels: map[string]string{"verb": "read"},
 			Succeeded: false, Duration: 2 * time.Second,
 			TimeoutPercent: 3.33, CumulativeTimeoutPercent: 6.67,
-			Error: "query failed\nwith details",
+			Error: "query failed\r\nwith\t details\fcontinued\vdone",
+		}, {
+			Name: "unlabeled-rule", Succeeded: false,
+			Error: "another failure",
 		}},
 		FailureReasons: []string{"one or more rule queries failed"},
 	}})
 	text := output.String()
 	for _, wanted := range []string{
 		"GROUP", "group", "FAIL", "rule", `{verb="read"}`, "2s", "3.33%", "6.67%",
-		"CUMULATIVE TIMEOUT USED", "2 (partial)", "query failed with details",
+		"CUMULATIVE TIMEOUT USED", "2 (partial)",
 	} {
 		if !strings.Contains(text, wanted) {
 			t.Fatalf("report does not contain %q:\n%s", wanted, text)
 		}
+	}
+
+	var errorLines []string
+	for _, line := range strings.Split(text, "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "ERROR:") {
+			errorLines = append(errorLines, line)
+		}
+	}
+	wantErrorLines := []string{
+		`ERROR: rule=rule labels={verb="read"}: query failed with details continued done`,
+		"ERROR: rule=unlabeled-rule labels=-: another failure",
+	}
+	if !reflect.DeepEqual(errorLines, wantErrorLines) {
+		t.Fatalf("error lines = %#v, want %#v\nreport:\n%s", errorLines, wantErrorLines, text)
 	}
 }
 
