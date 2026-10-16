@@ -90,6 +90,12 @@ Durations are measured around the query subprocess, so they include process
 startup and network time. Group series counts are the sum of successful rule
 query counts; they are marked partial when any rule query fails.
 
+Each rule row includes its rule-level static labels in deterministic label-name
+order. Group labels and labels returned dynamically by the query are not
+included. `TIMEOUT USED` reports the individual query's percentage of the
+group timeout, while `CUMULATIVE TIMEOUT USED` reports the percentage consumed
+by that rule and all preceding rules in the group.
+
 Instant-query commands do not write recording-rule results back to the
 datasource. Later rules therefore see only series that already exist in the
 datasource, not the temporary output of earlier validation queries.

@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sort"
 	"strconv"
 	"strings"
 	"text/tabwriter"
@@ -26,13 +27,15 @@ import (
 )
 
 type ruleResult struct {
-	Name           string
-	Succeeded      bool
-	Series         int
-	SeriesKnown    bool
-	Duration       time.Duration
-	TimeoutPercent float64
-	Error          string
+	Name                     string
+	StaticLabels             map[string]string
+	Succeeded                bool
+	Series                   int
+	SeriesKnown              bool
+	Duration                 time.Duration
+	TimeoutPercent           float64
+	CumulativeTimeoutPercent float64
+	Error                    string
 }
 
 type groupResult struct {
@@ -90,14 +93,17 @@ func executeGroups(
 			if err == nil && contextError != nil {
 				err = contextError
 			}
+			groupResult.Duration += duration
 
 			result := ruleResult{
-				Name:           currentRule.name(),
-				Succeeded:      err == nil,
-				Series:         series,
-				SeriesKnown:    err == nil,
-				Duration:       duration,
-				TimeoutPercent: percentage(duration, groupTimeout),
+				Name:                     currentRule.name(),
+				StaticLabels:             cloneLabels(currentRule.Labels),
+				Succeeded:                err == nil,
+				Series:                   series,
+				SeriesKnown:              err == nil,
+				Duration:                 duration,
+				TimeoutPercent:           percentage(duration, groupTimeout),
+				CumulativeTimeoutPercent: percentage(groupResult.Duration, groupTimeout),
 			}
 			if err != nil {
 				if contextError != nil {
@@ -110,7 +116,6 @@ func executeGroups(
 			} else {
 				groupResult.Series += series
 			}
-			groupResult.Duration += duration
 			groupResult.Rules = append(groupResult.Rules, result)
 		}
 
@@ -157,6 +162,34 @@ func boundedErrorText(value string) string {
 	return value[:maximumErrorBytes] + "... [truncated]"
 }
 
+func cloneLabels(labels map[string]string) map[string]string {
+	if len(labels) == 0 {
+		return nil
+	}
+	cloned := make(map[string]string, len(labels))
+	for name, value := range labels {
+		cloned[name] = value
+	}
+	return cloned
+}
+
+func formatStaticLabels(labels map[string]string) string {
+	if len(labels) == 0 {
+		return "-"
+	}
+	names := make([]string, 0, len(labels))
+	for name := range labels {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	formatted := make([]string, 0, len(names))
+	for _, name := range names {
+		formatted = append(formatted, name+"="+strconv.Quote(labels[name]))
+	}
+	return "{" + strings.Join(formatted, ",") + "}"
+}
+
 func percentage(value, total time.Duration) float64 {
 	if total <= 0 {
 		return 0
@@ -171,7 +204,7 @@ func writeReport(output io.Writer, groups []groupResult) {
 			fmt.Fprintln(writer)
 		}
 		fmt.Fprintf(writer, "GROUP\t%s\tinterval=%s\ttimeout=%s\n", group.Name, group.Interval, group.Timeout)
-		fmt.Fprintln(writer, "STATUS\tRULE\tSERIES\tDURATION\tTIMEOUT USED")
+		fmt.Fprintln(writer, "STATUS\tRULE\tLABELS\tSERIES\tDURATION\tTIMEOUT USED\tCUMULATIVE TIMEOUT USED")
 		for _, rule := range group.Rules {
 			status := "PASS"
 			if !rule.Succeeded {
@@ -183,12 +216,14 @@ func writeReport(output io.Writer, groups []groupResult) {
 			}
 			fmt.Fprintf(
 				writer,
-				"%s\t%s\t%s\t%s\t%.2f%%\n",
+				"%s\t%s\t%s\t%s\t%s\t%.2f%%\t%.2f%%\n",
 				status,
 				rule.Name,
+				formatStaticLabels(rule.StaticLabels),
 				series,
 				formatDuration(rule.Duration),
 				rule.TimeoutPercent,
+				rule.CumulativeTimeoutPercent,
 			)
 			if rule.Error != "" {
 				fmt.Fprintf(writer, "\tERROR: %s\n", strings.ReplaceAll(rule.Error, "\n", " "))

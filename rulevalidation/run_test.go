@@ -67,8 +67,8 @@ func TestExecuteGroupsRunsEveryRuleOnceAndContinuesAfterFailure(t *testing.T) {
 	}}
 	groups := []selectedGroup{{
 		ruleGroup: ruleGroup{Name: "group", Rules: []rule{
-			{Record: "one", Expr: "expr-one"},
-			{Record: "two", Expr: "expr-two"},
+			{Record: "one", Expr: "expr-one", Labels: map[string]string{"verb": "read"}},
+			{Record: "two", Expr: "expr-two", Labels: map[string]string{"verb": "write"}},
 			{Record: "three", Expr: "expr-three"},
 		}},
 		effectiveInterval: 20 * time.Second,
@@ -106,6 +106,16 @@ func TestExecuteGroupsRunsEveryRuleOnceAndContinuesAfterFailure(t *testing.T) {
 	}
 	if len(group.Rules) != 3 || group.Rules[1].SeriesKnown || group.Rules[2].TimeoutPercent != 40 {
 		t.Fatalf("rule results = %#v", group.Rules)
+	}
+	if !reflect.DeepEqual(group.Rules[0].StaticLabels, map[string]string{"verb": "read"}) ||
+		!reflect.DeepEqual(group.Rules[1].StaticLabels, map[string]string{"verb": "write"}) ||
+		group.Rules[2].StaticLabels != nil {
+		t.Fatalf("rule labels = %#v", group.Rules)
+	}
+	if group.Rules[0].CumulativeTimeoutPercent != 20 ||
+		group.Rules[1].CumulativeTimeoutPercent != 50 ||
+		group.Rules[2].CumulativeTimeoutPercent != 90 {
+		t.Fatalf("cumulative timeout percentages = %#v", group.Rules)
 	}
 }
 
@@ -213,16 +223,36 @@ func TestWriteReportIncludesRuleAndGroupMetrics(t *testing.T) {
 		Duration: 2 * time.Second, Timeout: time.Minute, Interval: time.Minute,
 		TimeoutPercent: 3.33, IntervalPercent: 3.33,
 		Rules: []ruleResult{{
-			Name: "rule", Succeeded: false, Duration: 2 * time.Second,
-			TimeoutPercent: 3.33, Error: "query failed\nwith details",
+			Name: "rule", StaticLabels: map[string]string{"verb": "read"},
+			Succeeded: false, Duration: 2 * time.Second,
+			TimeoutPercent: 3.33, CumulativeTimeoutPercent: 6.67,
+			Error: "query failed\nwith details",
 		}},
 		FailureReasons: []string{"one or more rule queries failed"},
 	}})
 	text := output.String()
-	for _, wanted := range []string{"GROUP", "group", "FAIL", "rule", "2s", "3.33%", "2 (partial)", "query failed with details"} {
+	for _, wanted := range []string{
+		"GROUP", "group", "FAIL", "rule", `{verb="read"}`, "2s", "3.33%", "6.67%",
+		"CUMULATIVE TIMEOUT USED", "2 (partial)", "query failed with details",
+	} {
 		if !strings.Contains(text, wanted) {
 			t.Fatalf("report does not contain %q:\n%s", wanted, text)
 		}
+	}
+}
+
+func TestFormatStaticLabelsIsDeterministicAndEscaped(t *testing.T) {
+	t.Parallel()
+
+	labels := map[string]string{
+		"z": "quoted\"value",
+		"a": "line\nbreak",
+	}
+	if got, want := formatStaticLabels(labels), `{a="line\nbreak",z="quoted\"value"}`; got != want {
+		t.Fatalf("formatStaticLabels() = %q, want %q", got, want)
+	}
+	if got := formatStaticLabels(nil); got != "-" {
+		t.Fatalf("formatStaticLabels(nil) = %q, want -", got)
 	}
 }
 
