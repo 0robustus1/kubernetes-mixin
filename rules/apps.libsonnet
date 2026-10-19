@@ -763,7 +763,7 @@
                     or
                     label_replace(
                       (
-                        kube_replicaset_owner{%(kubeStateMetricsSelector)s, owner_kind="Deployment"}
+                        kube_replicaset_owner{%(kubeStateMetricsSelector)s, owner_kind="Deployment", owner_is_controller="true"}
                         * on(%(clusterLabel)s, %(namespaceLabel)s, replicaset) group_left()
                         max by(%(clusterLabel)s, %(namespaceLabel)s, replicaset) (
                           kube_replicaset_spec_replicas{%(kubeStateMetricsSelector)s}
