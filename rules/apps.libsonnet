@@ -792,21 +792,20 @@
           ]
         ],
       },
-      {
-        name: 'k8s.rules.workload.pods_phase',
-        rules: [
-          {
-            record: 'namespace_workload:kube_pods_phase:sum',
-            expr: podsForWorkload(phasePodMetricExpr(), ', phase', customPodWorkloadExpr, true),
-          },
-        ], 
-      },
     ] + [
       {
         name: 'k8s.rules.workload.pods_phase.%(phase)s' % {phase: std.asciiLower(phase)},
         rules: [
           {
-            record: 'namespace_workload:kube_pods_phase:%(phase)s:sum' % {phase: std.asciiLower(phase)},
+            record: 'namespace_workload:kube_pods_phase:sum',
+            expr: podsForWorkload(phasePodMetricExpr(phase), ', phase', customPodWorkloadExpr, true),
+            labels: {
+              phase: phase,
+            }
+          },
+        ] + [
+          {
+            record: 'namespace_workload:kube_pods_phase:sum',
             expr: podsForWorkload(phasePodMetricExpr(phase), ', phase', podWorkloadExprs[i]),
             labels: {
               workload_type: fixedPodWorkloadTypes[i],
