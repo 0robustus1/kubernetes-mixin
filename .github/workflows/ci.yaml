@@ -22,7 +22,7 @@ on:
   pull_request:
 jobs:
   build-tools:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04-arm
     name: Build Go Tools
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -43,7 +43,7 @@ jobs:
           if-no-files-found: error
 
   matrix:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04-arm
     name: ${{ matrix.name }}
     needs: build-tools
     strategy:
