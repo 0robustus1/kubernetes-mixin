@@ -662,160 +662,166 @@
           },
         ],
       },
-      {
-        name: 'k8s.rules.workload',
-        rules: [
+    ] + (
+      if $._config.includeExtendedWorkloadRecordingRules then
+        [
           {
-            record: 'namespace_workload:kube_pod_owner:derived',
-            expr: (
-              |||
-                max by (%(clusterLabel)s, %(namespaceLabel)s, workload, workload_is_controller) (%(workloadExpr)s)
-              ||| % (
-                $._config {
-                  workloadExpr: podWorkloadExprs[i],
-                }
-              )
-            ),
-            labels: {
-              workload_type: fixedPodWorkloadTypes[i],
-            },
-          }
-          for i in std.range(0, std.length(fixedPodWorkloadTypes) - 1)
-        ] + [
-          {
-            record: 'namespace_workload:kube_pod_owner:derived',
-            expr: (
-              |||
-                max by (%(clusterLabel)s, %(namespaceLabel)s, workload, workload_type, workload_is_controller) (%(workloadExpr)s)
-              ||| % (
-                $._config {
-                  workloadExpr: customPodWorkloadExpr,
-                }
-              )
-            ),
-          },
-        ] + [
-          {
-            record: 'namespace_workload:kube_pods_ready:sum',
-            expr: podsForWorkload(readyPodMetricExpr, '', podWorkloadExprs[i]),
-            labels: {
-              workload_type: fixedPodWorkloadTypes[i],
-            },
-          }
-          for i in std.range(0, std.length(fixedPodWorkloadTypes) - 1)
-        ] + [
-          {
-            record: 'namespace_workload:kube_pods_ready:sum',
-            expr: podsForWorkload(readyPodMetricExpr, '', customPodWorkloadExpr, true),
-          },
-        ],
-      },
-      {
-        name: 'k8s.rules.workload.pods_desired',
-        rules: [
-          {
-            // There are a few cases that kube_pods_desired cannot really cover:
-            // * Custom Workloads (such as Rollouts, ...) as we do not know which metric would include the desired number of Pods.
-            // * Bare Pods, mostly because the desired number would always be 1
-            // * Static Pods, mostly because the desired number would always be 1
-            // * Pod owned Jobs (might own multiple Jobs)
-            record: 'namespace_workload:kube_pods_desired:sum',
-            expr: (
-              |||
-                topk by(%(clusterLabel)s, %(namespaceLabel)s, workload, workload_type)
-                 (1, sum by (%(clusterLabel)s, %(namespaceLabel)s, workload, workload_type) (
-                   label_replace(label_replace(
-                     topk by(%(clusterLabel)s, %(namespaceLabel)s, %(workloadLabel)s)
-                       (1, (%(workloadMetricQuery)s)),
-                     "workload", "$1", "%(workloadLabel)s", "(.+)"),
-                   "workload_type", "%(workloadType)s", "", ""))) %(noOwnerExpr)s
-              |||
-            ) % ($._config {
-                   ownershipCheckMetric: '',
-                   ownershipCheckAdditionalSelectors: '',
-                 } + metricTuple + {
-                   noOwnerExpr: (if self.ownershipCheckMetric == '' then '' else (
-                                   |||
-                                     and on (%(clusterLabel)s, %(namespaceLabel)s, workload, workload_type)
-                                     topk by(%(clusterLabel)s, %(namespaceLabel)s, workload, workload_type) (1,
-                                       label_replace(label_replace(%(ownershipCheckMetric)s{%(kubeStateMetricsSelector)s%(ownershipCheckAdditionalSelectors)s},
-                                         "workload", "$1", "%(workloadLabel)s", "(.+)"),
-                                       "workload_type", "%(workloadType)s", "", ""))
-                                   ||| % self
-                                 )),
-                 }),
-            labels: {
-              workload_type: metricTuple.workloadType,
-            },
-          }
-          for metricTuple in [
-            {
-              workloadMetricQuery: 'kube_daemonset_status_desired_number_scheduled{%(kubeStateMetricsSelector)s}' % $._config,
-              workloadLabel: 'daemonset',
-              workloadType: workloadTypes.daemonSet,
-            },
-            {
-              workloadMetric: 'kube_deployment_spec_replicas',
-              workloadMetricQuery: (
-                |||
-                  max by(%(clusterLabel)s, %(namespaceLabel)s, deployment) (
-                    label_replace(kube_deployment_spec_replicas{%(kubeStateMetricsSelector)s}, "deployment_original", "true", "", "")
-                    or
-                    label_replace(
-                      (
-                        kube_replicaset_owner{%(kubeStateMetricsSelector)s, owner_kind="Deployment", owner_is_controller="true"}
-                        * on(%(clusterLabel)s, %(namespaceLabel)s, replicaset) group_left()
-                        max by(%(clusterLabel)s, %(namespaceLabel)s, replicaset) (
-                          kube_replicaset_spec_replicas{%(kubeStateMetricsSelector)s}
-                        )
-                      ),
-                      "deployment", "$1", "owner_name", "(.+)"
-                    )
+            name: 'k8s.rules.workload',
+            rules: [
+              {
+                record: 'namespace_workload:kube_pod_owner:derived',
+                expr: (
+                  |||
+                    max by (%(clusterLabel)s, %(namespaceLabel)s, workload, workload_is_controller) (%(workloadExpr)s)
+                  ||| % (
+                    $._config {
+                      workloadExpr: podWorkloadExprs[i],
+                    }
                   )
-                ||| % $._config
-              ),
-              workloadLabel: 'deployment',
-              workloadType: workloadTypes.deployment,
-            },
-            {
-              workloadMetricQuery: 'kube_replicaset_spec_replicas{%(kubeStateMetricsSelector)s}' % $._config,
-              ownershipCheckMetric: 'kube_replicaset_owner',
-              ownershipCheckAdditionalSelectors: ', owner_kind=""',
-              workloadLabel: 'replicaset',
-              workloadType: workloadTypes.replicaSet,
-            },
-            {
-              workloadMetricQuery: 'kube_statefulset_replicas{%(kubeStateMetricsSelector)s}' % $._config,
-              workloadLabel: 'statefulset',
-              workloadType: workloadTypes.statefulSet,
-            },
-          ]
-        ],
-      },
-    ] + [
-      {
-        name: 'k8s.rules.workload.pods_phase.%(phase)s' % { phase: std.asciiLower(phase) },
-        rules: [
+                ),
+                labels: {
+                  workload_type: fixedPodWorkloadTypes[i],
+                },
+              }
+              for i in std.range(0, std.length(fixedPodWorkloadTypes) - 1)
+            ] + [
+              {
+                record: 'namespace_workload:kube_pod_owner:derived',
+                expr: (
+                  |||
+                    max by (%(clusterLabel)s, %(namespaceLabel)s, workload, workload_type, workload_is_controller) (%(workloadExpr)s)
+                  ||| % (
+                    $._config {
+                      workloadExpr: customPodWorkloadExpr,
+                    }
+                  )
+                ),
+              },
+            ] + [
+              {
+                record: 'namespace_workload:kube_pods_ready:sum',
+                expr: podsForWorkload(readyPodMetricExpr, '', podWorkloadExprs[i]),
+                labels: {
+                  workload_type: fixedPodWorkloadTypes[i],
+                },
+              }
+              for i in std.range(0, std.length(fixedPodWorkloadTypes) - 1)
+            ] + [
+              {
+                record: 'namespace_workload:kube_pods_ready:sum',
+                expr: podsForWorkload(readyPodMetricExpr, '', customPodWorkloadExpr, true),
+              },
+            ],
+          },
           {
-            record: 'namespace_workload:kube_pods_phase:sum',
-            expr: podsForWorkload(phasePodMetricExpr(phase), ', phase', customPodWorkloadExpr, true),
-            labels: {
-              phase: phase,
-            },
+            name: 'k8s.rules.workload.pods_desired',
+            rules: [
+              {
+                // There are a few cases that kube_pods_desired cannot really cover:
+                // * Custom Workloads (such as Rollouts, ...) as we do not know which metric would include the desired number of Pods.
+                // * Bare Pods, mostly because the desired number would always be 1
+                // * Static Pods, mostly because the desired number would always be 1
+                // * Pod owned Jobs (might own multiple Jobs)
+                record: 'namespace_workload:kube_pods_desired:sum',
+                expr: (
+                  |||
+                    topk by(%(clusterLabel)s, %(namespaceLabel)s, workload, workload_type)
+                     (1, sum by (%(clusterLabel)s, %(namespaceLabel)s, workload, workload_type) (
+                       label_replace(label_replace(
+                         topk by(%(clusterLabel)s, %(namespaceLabel)s, %(workloadLabel)s)
+                           (1, (%(workloadMetricQuery)s)),
+                         "workload", "$1", "%(workloadLabel)s", "(.+)"),
+                       "workload_type", "%(workloadType)s", "", ""))) %(noOwnerExpr)s
+                  |||
+                ) % ($._config {
+                       ownershipCheckMetric: '',
+                       ownershipCheckAdditionalSelectors: '',
+                     } + metricTuple + {
+                       noOwnerExpr: (if self.ownershipCheckMetric == '' then '' else (
+                                       |||
+                                         and on (%(clusterLabel)s, %(namespaceLabel)s, workload, workload_type)
+                                         topk by(%(clusterLabel)s, %(namespaceLabel)s, workload, workload_type) (1,
+                                           label_replace(label_replace(%(ownershipCheckMetric)s{%(kubeStateMetricsSelector)s%(ownershipCheckAdditionalSelectors)s},
+                                             "workload", "$1", "%(workloadLabel)s", "(.+)"),
+                                           "workload_type", "%(workloadType)s", "", ""))
+                                       ||| % self
+                                     )),
+                     }),
+                labels: {
+                  workload_type: metricTuple.workloadType,
+                },
+              }
+              for metricTuple in [
+                {
+                  workloadMetricQuery: 'kube_daemonset_status_desired_number_scheduled{%(kubeStateMetricsSelector)s}' % $._config,
+                  workloadLabel: 'daemonset',
+                  workloadType: workloadTypes.daemonSet,
+                },
+                {
+                  workloadMetric: 'kube_deployment_spec_replicas',
+                  workloadMetricQuery: (
+                    |||
+                      max by(%(clusterLabel)s, %(namespaceLabel)s, deployment) (
+                        label_replace(kube_deployment_spec_replicas{%(kubeStateMetricsSelector)s}, "deployment_original", "true", "", "")
+                        or
+                        label_replace(
+                          (
+                            kube_replicaset_owner{%(kubeStateMetricsSelector)s, owner_kind="Deployment", owner_is_controller="true"}
+                            * on(%(clusterLabel)s, %(namespaceLabel)s, replicaset) group_left()
+                            max by(%(clusterLabel)s, %(namespaceLabel)s, replicaset) (
+                              kube_replicaset_spec_replicas{%(kubeStateMetricsSelector)s}
+                            )
+                          ),
+                          "deployment", "$1", "owner_name", "(.+)"
+                        )
+                      )
+                    ||| % $._config
+                  ),
+                  workloadLabel: 'deployment',
+                  workloadType: workloadTypes.deployment,
+                },
+                {
+                  workloadMetricQuery: 'kube_replicaset_spec_replicas{%(kubeStateMetricsSelector)s}' % $._config,
+                  ownershipCheckMetric: 'kube_replicaset_owner',
+                  ownershipCheckAdditionalSelectors: ', owner_kind=""',
+                  workloadLabel: 'replicaset',
+                  workloadType: workloadTypes.replicaSet,
+                },
+                {
+                  workloadMetricQuery: 'kube_statefulset_replicas{%(kubeStateMetricsSelector)s}' % $._config,
+                  workloadLabel: 'statefulset',
+                  workloadType: workloadTypes.statefulSet,
+                },
+              ]
+            ],
           },
         ] + [
           {
-            record: 'namespace_workload:kube_pods_phase:sum',
-            expr: podsForWorkload(phasePodMetricExpr(phase), ', phase', podWorkloadExprs[i]),
-            labels: {
-              workload_type: fixedPodWorkloadTypes[i],
-              phase: phase,
-            },
+            name: 'k8s.rules.workload.pods_phase.%(phase)s' % { phase: std.asciiLower(phase) },
+            rules: [
+              {
+                record: 'namespace_workload:kube_pods_phase:sum',
+                expr: podsForWorkload(phasePodMetricExpr(phase), ', phase', customPodWorkloadExpr, true),
+                labels: {
+                  phase: phase,
+                },
+              },
+            ] + [
+              {
+                record: 'namespace_workload:kube_pods_phase:sum',
+                expr: podsForWorkload(phasePodMetricExpr(phase), ', phase', podWorkloadExprs[i]),
+                labels: {
+                  workload_type: fixedPodWorkloadTypes[i],
+                  phase: phase,
+                },
+              }
+              for i in std.range(0, std.length(fixedPodWorkloadTypes) - 1)
+            ],
           }
-          for i in std.range(0, std.length(fixedPodWorkloadTypes) - 1)
-        ],
-      }
-      for phase in podPhases
-    ],
+          for phase in podPhases
+        ]
+      else
+        []
+    ),
   },
 }
