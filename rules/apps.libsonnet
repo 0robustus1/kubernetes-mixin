@@ -759,24 +759,7 @@
                 },
                 {
                   workloadMetric: 'kube_deployment_spec_replicas',
-                  workloadMetricQuery: (
-                    |||
-                      max by(%(clusterLabel)s, %(namespaceLabel)s, deployment) (
-                        label_replace(kube_deployment_spec_replicas{%(kubeStateMetricsSelector)s}, "deployment_original", "true", "", "")
-                        or
-                        label_replace(
-                          (
-                            kube_replicaset_owner{%(kubeStateMetricsSelector)s, owner_kind="Deployment", owner_is_controller="true"}
-                            * on(%(clusterLabel)s, %(namespaceLabel)s, replicaset) group_left()
-                            max by(%(clusterLabel)s, %(namespaceLabel)s, replicaset) (
-                              kube_replicaset_spec_replicas{%(kubeStateMetricsSelector)s}
-                            )
-                          ),
-                          "deployment", "$1", "owner_name", "(.+)"
-                        )
-                      )
-                    ||| % $._config
-                  ),
+                  workloadMetricQuery: 'kube_deployment_spec_replicas{%(kubeStateMetricsSelector)s}' % $._config,
                   workloadLabel: 'deployment',
                   workloadType: workloadTypes.deployment,
                 },
