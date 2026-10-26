@@ -24,6 +24,27 @@ local utils = import '../lib/utils.libsonnet';
   },
 
   prometheusAlerts+:: {
+    local configuredAdditionalGrouping = utils.rejectLabelsExcludedByWithout(
+      $._config.additionalGrouping.alertingRules,
+      [$._config.namespaceLabel, 'service', 'endpoint'],
+      'kube-apiserver alerts'
+    ),
+    local additionalGrouping = utils.withoutLabels(configuredAdditionalGrouping, ['alertname', 'severity', 'short', 'long']),
+    local burnrateAdditionalGrouping = utils.requireAlertGroupingInRecordingRules(
+      utils.withoutLabels(additionalGrouping, [$._config.clusterLabel, 'code', 'le', 'resource', 'scope', 'verb']),
+      $._config.additionalGrouping.recordingRules,
+      'KubeAPIErrorBudgetBurn'
+    ),
+    local groupingLabels(labels, excludedAdditionalLabels=[]) =
+      utils.groupingLabels(labels, utils.withoutLabels(additionalGrouping, excludedAdditionalLabels)),
+    local config = $._config {
+      groupingCluster: groupingLabels([$._config.clusterLabel]),
+      groupingBurnrate: utils.groupingLabels([$._config.clusterLabel], burnrateAdditionalGrouping),
+      matchingCertificate: groupingLabels(['job', $._config.clusterLabel, 'instance'], ['le']),
+      groupingAggregatedAPIErrors: groupingLabels([$._config.clusterLabel, 'instance', 'name', 'reason']),
+      groupingAggregatedAPIDown: groupingLabels(['name', 'namespace', $._config.clusterLabel]),
+    },
+
     groups+: [
       {
         name: 'kube-apiserver-slos',
@@ -35,12 +56,12 @@ local utils = import '../lib/utils.libsonnet';
               and on(%s)
               sum by(%s) (apiserver_request:burnrate%s) > (%.2f * %.5f)
             ||| % [
-              $._config.clusterLabel,
+              config.groupingBurnrate,
               w.long,
               w.factor,
               (1 - $._config.SLOs.apiserver.target),
-              $._config.clusterLabel,
-              $._config.clusterLabel,
+              config.groupingBurnrate,
+              config.groupingBurnrate,
               w.short,
               w.factor,
               (1 - $._config.SLOs.apiserver.target),
@@ -69,8 +90,8 @@ local utils = import '../lib/utils.libsonnet';
             expr: |||
               histogram_quantile(0.01, sum without (%(namespaceLabel)s, service, endpoint) (rate(apiserver_client_certificate_expiration_seconds_bucket{%(kubeApiserverSelector)s}[5m]))) < %(certExpirationWarningSeconds)s
               and
-              on(job, %(clusterLabel)s, instance) apiserver_client_certificate_expiration_seconds_count{%(kubeApiserverSelector)s} > 0
-            ||| % $._config,
+              on(%(matchingCertificate)s) apiserver_client_certificate_expiration_seconds_count{%(kubeApiserverSelector)s} > 0
+            ||| % config,
             'for': '5m',
             labels: {
               severity: 'warning',
@@ -88,8 +109,8 @@ local utils = import '../lib/utils.libsonnet';
             expr: |||
               histogram_quantile(0.01, sum without (%(namespaceLabel)s, service, endpoint) (rate(apiserver_client_certificate_expiration_seconds_bucket{%(kubeApiserverSelector)s}[5m]))) < %(certExpirationCriticalSeconds)s
               and
-              on(job, %(clusterLabel)s, instance) apiserver_client_certificate_expiration_seconds_count{%(kubeApiserverSelector)s} > 0
-            ||| % $._config,
+              on(%(matchingCertificate)s) apiserver_client_certificate_expiration_seconds_count{%(kubeApiserverSelector)s} > 0
+            ||| % config,
             'for': '5m',
             labels: {
               severity: 'critical',
@@ -105,8 +126,8 @@ local utils = import '../lib/utils.libsonnet';
           {
             alert: 'KubeAggregatedAPIErrors',
             expr: |||
-              sum by(%(clusterLabel)s, instance, name, reason)(increase(aggregator_unavailable_apiservice_total{%(kubeApiserverSelector)s}[1m])) > 0
-            ||| % $._config,
+              sum by(%(groupingAggregatedAPIErrors)s)(increase(aggregator_unavailable_apiservice_total{%(kubeApiserverSelector)s}[1m])) > 0
+            ||| % config,
             'for': '10m',
             labels: {
               severity: 'warning',
@@ -121,8 +142,8 @@ local utils = import '../lib/utils.libsonnet';
           {
             alert: 'KubeAggregatedAPIDown',
             expr: |||
-              (1 - max by(name, namespace, %(clusterLabel)s)(avg_over_time(aggregator_unavailable_apiservice{%(kubeApiserverSelector)s}[10m]))) * 100 < 85
-            ||| % $._config,
+              (1 - max by(%(groupingAggregatedAPIDown)s)(avg_over_time(aggregator_unavailable_apiservice{%(kubeApiserverSelector)s}[10m]))) * 100 < 85
+            ||| % config,
             'for': '5m',
             labels: {
               severity: 'warning',
@@ -145,8 +166,8 @@ local utils = import '../lib/utils.libsonnet';
           {
             alert: 'KubeAPITerminatedRequests',
             expr: |||
-              sum by(%(clusterLabel)s) (rate(apiserver_request_terminations_total{%(kubeApiserverSelector)s}[10m])) / ( sum by(%(clusterLabel)s) (rate(apiserver_request_total{%(kubeApiserverSelector)s}[10m])) + sum by(%(clusterLabel)s) (rate(apiserver_request_terminations_total{%(kubeApiserverSelector)s}[10m])) ) > 0.20
-            ||| % $._config,
+              sum by(%(groupingCluster)s) (rate(apiserver_request_terminations_total{%(kubeApiserverSelector)s}[10m])) / ( sum by(%(groupingCluster)s) (rate(apiserver_request_total{%(kubeApiserverSelector)s}[10m])) + sum by(%(groupingCluster)s) (rate(apiserver_request_terminations_total{%(kubeApiserverSelector)s}[10m])) ) > 0.20
+            ||| % config,
             labels: {
               severity: 'warning',
             },

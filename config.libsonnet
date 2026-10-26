@@ -161,7 +161,9 @@
       // Additional groups for `by` and `on` expressions in recordingRules
       recordingRules: [],
 
-      // Additional groups for `by` expressions in alertingRules
+      // Additional groups for `by` and required `on` expressions in alertingRules.
+      // Generation fails when a configured label is removed by a `without` aggregation.
+      // Recording-backed alerts also require the label in `recordingRules`.
       alertingRules: [],
 
       // Additional groups for `by` expressions in dashboards

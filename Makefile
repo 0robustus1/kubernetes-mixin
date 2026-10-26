@@ -30,6 +30,7 @@ PINT_BIN=$(BIN_DIR)/pint
 METRICS_BIN=$(BIN_DIR)/required-metrics
 METRICS_FILE=metrics.txt
 ADDITIONAL_GROUPING_RULES=tmp/additional-grouping-rules.yaml
+ADDITIONAL_GROUPING_ALERTS=tmp/additional-grouping-alerts.yaml
 TOOLING=$(JB_BIN) $(JSONNETLINT_BIN) $(JSONNET_BIN) $(JSONNETFMT_BIN) $(PROMTOOL_BIN) $(MARKDOWNFMT_BIN) $(VALE_BIN) $(PINT_BIN)
 NPROC ?= $(shell nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 4)
 JSONNETFMT_ARGS=-n 2 --max-blank-lines 2 --string-style s --comment-style s
@@ -121,6 +122,11 @@ $(ADDITIONAL_GROUPING_RULES): $(JSONNET_BIN) $(JSONNET_VENDOR) tests/additional-
 	@$(JSONNET_BIN) -J vendor -S tests/additional-grouping-rules.jsonnet > $@.tmp
 	@mv $@.tmp $@
 
+$(ADDITIONAL_GROUPING_ALERTS): $(JSONNET_BIN) $(JSONNET_VENDOR) tests/additional-grouping-alerts.jsonnet mixin.libsonnet config.libsonnet lib/utils.libsonnet alerts/*.libsonnet
+	@mkdir -p $(@D)
+	@$(JSONNET_BIN) -J vendor -S tests/additional-grouping-alerts.jsonnet > $@.tmp
+	@mv $@.tmp $@
+
 $(OUT_DIR)/.dashboards-generated: $(JSONNET_BIN) $(JSONNET_VENDOR) mixin.libsonnet lib/dashboards.jsonnet $(DASHBOARD_SOURCES)
 	@mkdir -p $(OUT_DIR)
 	@$(JSONNET_BIN) -J vendor -m $(OUT_DIR) lib/dashboards.jsonnet
@@ -185,9 +191,36 @@ clean:
 .PHONY: config-test
 config-test: $(JSONNET_BIN) $(JSONNET_VENDOR)
 	@$(JSONNET_BIN) -J vendor tests/config-test.jsonnet > /dev/null
+	@output=$$($(JSONNET_BIN) -J vendor --ext-str groupingLabel=job tests/invalid-alert-grouping.jsonnet 2>&1); status=$$?; \
+		if [ $$status -eq 0 ]; then \
+			echo 'expected invalid alert grouping configuration to fail'; \
+			exit 1; \
+		fi; \
+		case "$$output" in \
+			*'additionalGrouping.alertingRules contains labels removed by without() aggregations in kubernetes-resources alerts: job'*) ;; \
+			*) echo "$$output"; exit 1 ;; \
+		esac
+	@output=$$($(JSONNET_BIN) -J vendor --ext-str groupingLabel=service tests/invalid-alert-grouping.jsonnet 2>&1); status=$$?; \
+		if [ $$status -eq 0 ]; then \
+			echo 'expected invalid alert grouping configuration to fail'; \
+			exit 1; \
+		fi; \
+		case "$$output" in \
+			*'additionalGrouping.alertingRules contains labels removed by without() aggregations in kube-apiserver alerts: service'*) ;; \
+			*) echo "$$output"; exit 1 ;; \
+		esac
+	@output=$$($(JSONNET_BIN) -J vendor --ext-str groupingLabel=tenant tests/invalid-alert-grouping.jsonnet 2>&1); status=$$?; \
+		if [ $$status -eq 0 ]; then \
+			echo 'expected recording-backed alert grouping configuration to fail'; \
+			exit 1; \
+		fi; \
+		case "$$output" in \
+			*'additionalGrouping.alertingRules labels used by recording-backed alerts must also be configured in additionalGrouping.recordingRules for KubeAPIErrorBudgetBurn: tenant'*) ;; \
+			*) echo "$$output"; exit 1 ;; \
+		esac
 
 .PHONY: test
-test: $(PROMTOOL_BIN) config-test prometheus_alerts.yaml prometheus_rules.yaml $(ADDITIONAL_GROUPING_RULES)
+test: $(PROMTOOL_BIN) config-test prometheus_alerts.yaml prometheus_rules.yaml $(ADDITIONAL_GROUPING_RULES) $(ADDITIONAL_GROUPING_ALERTS)
 	@cd scripts && go test ./metrics
 	@$(PROMTOOL_BIN) test rules tests/*.yaml
 
