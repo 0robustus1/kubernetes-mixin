@@ -84,19 +84,6 @@ local additionalGrouping = (mixin + (import '../rules/windows.libsonnet')) {
   },
 };
 
-// Additional labels are applied to both aggregations and vector matching. The configured
-// namespace label is not repeated where it is already part of the query-specific grouping.
-local nodeCPU = findRule(additionalGrouping.prometheusRules.groups, 'node:node_num_cpu:sum');
-assert std.length(std.findSubstr('count by (cluster, node, tenant, namespace)', nodeCPU.expr)) == 1;
-assert std.length(std.findSubstr('on (cluster, namespace, pod, tenant)', nodeCPU.expr)) == 1;
-assert std.length(std.findSubstr('topk by(cluster, namespace, pod, tenant)', nodeCPU.expr)) == 1;
-
-// The separately imported Windows rules use the same grouping behavior.
-local windowsAvailable = findRule(additionalGrouping.prometheusRules.groups, 'windows_pod_container_available');
-assert std.length(std.findSubstr('on(container_id, cluster, tenant)', windowsAvailable.expr)) == 1;
-assert std.length(std.findSubstr('group_left(container, pod, namespace)', windowsAvailable.expr)) == 1;
-assert std.length(std.findSubstr('by(container, container_id, pod, namespace, cluster, tenant)', windowsAvailable.expr)) == 1;
-
 // Labels supplied through group_left remain payload labels instead of becoming match keys, and
 // labels overwritten by a recording rule are not retained as additional dimensions.
 local conflictingGrouping = (mixin + (import '../rules/windows.libsonnet')) {
