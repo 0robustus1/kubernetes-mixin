@@ -156,9 +156,9 @@
     // Controls workload_type label value format: false = lowercase, true = PascalCase
     usePascalCaseForWorkloadTypeLabelValues: false,
 
-    // Additional grouping instructions for all `by` expressions (e.g. sum by(), count by(), ...)
+    // Additional grouping instructions for `by` and `on` expressions.
     additionalGrouping: {
-      // Additional groups for `by` expressions in recordingRules
+      // Additional groups for `by` and `on` expressions in recordingRules
       recordingRules: [],
 
       // Additional groups for `by` expressions in alertingRules
@@ -166,6 +166,6 @@
 
       // Additional groups for `by` expressions in dashboards
       dashboards: [],
-    }
+    },
   },
 }
