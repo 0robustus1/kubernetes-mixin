@@ -178,9 +178,19 @@ local utils = import '../lib/utils.libsonnet';
           },
           {
             alert: 'KubeletPlegDurationHigh',
-            expr: |||
-              node_quantile:kubelet_pleg_relist_duration_seconds:histogram_quantile{quantile="0.99"} >= 10
-            ||| % $._config,
+            expr:
+              local recordingBackedGrouping = utils.withoutLabels(
+                additionalGrouping,
+                [$._config.clusterLabel, 'instance', 'node', 'quantile', 'le']
+              );
+              assert utils.requireAlertGroupingInRecordingRules(
+                recordingBackedGrouping,
+                $._config.additionalGrouping.recordingRules,
+                'KubeletPlegDurationHigh'
+              ) == recordingBackedGrouping;
+              |||
+                node_quantile:kubelet_pleg_relist_duration_seconds:histogram_quantile{quantile="0.99"} >= 10
+              ||| % $._config,
             'for': '5m',
             labels: {
               severity: 'warning',

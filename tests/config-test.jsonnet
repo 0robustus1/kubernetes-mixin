@@ -61,6 +61,19 @@ local noWindows = withApiserverWindows([]);
 assert groupRules(noWindows.prometheusRules.groups, 'kube-apiserver-burnrate.rules') == [];
 assert groupRules(noWindows.prometheusAlerts.groups, 'kube-apiserver-slos') == [];
 
+// Recording-backed non-API alerts still validate their grouping dependency when API SLO
+// windows are disabled, and matching recording/alert grouping remains valid.
+local noWindowsAdditionalGrouping = withApiserverWindows([]) {
+  _config+:: {
+    additionalGrouping+: {
+      recordingRules: ['tenant'],
+      alertingRules: ['tenant'],
+    },
+  },
+};
+assert findAlert(noWindowsAdditionalGrouping.prometheusAlerts.groups, 'KubeletPlegDurationHigh').expr ==
+       findAlert(mixin.prometheusAlerts.groups, 'KubeletPlegDurationHigh').expr;
+
 // Windows are ordered by duration, so every Prometheus duration literal has to parse:
 // sub-second units, units coarser than a day, and compound values.
 local exoticWindows = withApiserverWindows([

@@ -218,6 +218,15 @@ config-test: $(JSONNET_BIN) $(JSONNET_VENDOR)
 			*'additionalGrouping.alertingRules labels used by recording-backed alerts must also be configured in additionalGrouping.recordingRules for KubeAPIErrorBudgetBurn: tenant'*) ;; \
 			*) echo "$$output"; exit 1 ;; \
 		esac
+	@output=$$($(JSONNET_BIN) -J vendor --ext-str groupingLabel=tenant tests/invalid-kubelet-alert-grouping.jsonnet 2>&1); status=$$?; \
+		if [ $$status -eq 0 ]; then \
+			echo 'expected kubelet recording-backed alert grouping configuration to fail'; \
+			exit 1; \
+		fi; \
+		case "$$output" in \
+			*'additionalGrouping.alertingRules labels used by recording-backed alerts must also be configured in additionalGrouping.recordingRules for KubeletPlegDurationHigh: tenant'*) ;; \
+			*) echo "$$output"; exit 1 ;; \
+		esac
 
 .PHONY: test
 test: $(PROMTOOL_BIN) config-test prometheus_alerts.yaml prometheus_rules.yaml $(ADDITIONAL_GROUPING_RULES) $(ADDITIONAL_GROUPING_ALERTS)

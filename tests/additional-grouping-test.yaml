@@ -106,19 +106,58 @@ tests:
         runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodnotready"
         summary: "Pod has been in a non-ready state for more than 15 minutes."
 
-- name: additional grouping isolates API error budget alerts
+- name: additional grouping survives the API burn-rate recording pipeline
   interval: 1m
   input_series:
-  - series: 'apiserver_request:burnrate1h{cluster="cluster",tenant="first"}'
-    values: '0.2x5'
-  - series: 'apiserver_request:burnrate5m{cluster="cluster",tenant="first"}'
-    values: '0.2x5'
-  - series: 'apiserver_request:burnrate1h{cluster="cluster",tenant="second"}'
-    values: '0.2x5'
-  - series: 'apiserver_request:burnrate5m{cluster="cluster",tenant="second"}'
-    values: '0.2x5'
+  # The first tenant has 120 slow and 60 failed requests out of 600 per minute: 30% bad.
+  - series: 'apiserver_request_sli_duration_seconds_count{cluster="cluster",tenant="first",job="kube-apiserver",verb="POST",subresource=""}'
+    values: '0+600x15'
+  - series: 'apiserver_request_sli_duration_seconds_bucket{cluster="cluster",tenant="first",job="kube-apiserver",verb="POST",subresource="",le="1.0"}'
+    values: '0+480x15'
+  - series: 'apiserver_request_total{cluster="cluster",tenant="first",job="kube-apiserver",verb="POST",code="200"}'
+    values: '0+540x15'
+  - series: 'apiserver_request_total{cluster="cluster",tenant="first",job="kube-apiserver",verb="POST",code="500"}'
+    values: '0+60x15'
+  # The second tenant has only 30 failed requests out of 600 per minute: 5% bad.
+  - series: 'apiserver_request_sli_duration_seconds_count{cluster="cluster",tenant="second",job="kube-apiserver",verb="POST",subresource=""}'
+    values: '0+600x15'
+  - series: 'apiserver_request_sli_duration_seconds_bucket{cluster="cluster",tenant="second",job="kube-apiserver",verb="POST",subresource="",le="1.0"}'
+    values: '0+600x15'
+  - series: 'apiserver_request_total{cluster="cluster",tenant="second",job="kube-apiserver",verb="POST",code="200"}'
+    values: '0+570x15'
+  - series: 'apiserver_request_total{cluster="cluster",tenant="second",job="kube-apiserver",verb="POST",code="500"}'
+    values: '0+30x15'
+  promql_expr_test:
+  - eval_time: 10m
+    expr: cluster_verb:apiserver_request_sli_bad_events:rate5m{verb="write"}
+    exp_samples:
+    - value: 3
+      labels: 'cluster_verb:apiserver_request_sli_bad_events:rate5m{cluster="cluster",tenant="first",verb="write"}'
+    - value: 0.5
+      labels: 'cluster_verb:apiserver_request_sli_bad_events:rate5m{cluster="cluster",tenant="second",verb="write"}'
+  - eval_time: 10m
+    expr: cluster_verb:apiserver_request_sli_events:rate5m{verb="write"}
+    exp_samples:
+    - value: 10
+      labels: 'cluster_verb:apiserver_request_sli_events:rate5m{cluster="cluster",tenant="first",verb="write"}'
+    - value: 10
+      labels: 'cluster_verb:apiserver_request_sli_events:rate5m{cluster="cluster",tenant="second",verb="write"}'
+  - eval_time: 10m
+    expr: apiserver_request:burnrate5m{verb="write"}
+    exp_samples:
+    - value: 0.3
+      labels: 'apiserver_request:burnrate5m{cluster="cluster",tenant="first",verb="write"}'
+    - value: 0.05
+      labels: 'apiserver_request:burnrate5m{cluster="cluster",tenant="second",verb="write"}'
+  - eval_time: 10m
+    expr: apiserver_request:burnrate1h{verb="write"}
+    exp_samples:
+    - value: 0.30000000000000004
+      labels: 'apiserver_request:burnrate1h{cluster="cluster",tenant="first",verb="write"}'
+    - value: 0.05
+      labels: 'apiserver_request:burnrate1h{cluster="cluster",tenant="second",verb="write"}'
   alert_rule_test:
-  - eval_time: 3m
+  - eval_time: 13m
     alertname: KubeAPIErrorBudgetBurn
     exp_alerts:
     - exp_labels:
@@ -131,16 +170,56 @@ tests:
         description: "The Kube API server is burning too much error budget on cluster cluster."
         runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
         summary: "The Kube API server is burning too much error budget."
+
+- name: additional grouping survives the kubelet PLEG recording pipeline
+  interval: 1m
+  input_series:
+  - series: 'kubelet_pleg_relist_duration_seconds_bucket{cluster="cluster",instance="shared-instance",tenant="first",job="kubelet",le="10"}'
+    values: '1+0x10'
+  - series: 'kubelet_pleg_relist_duration_seconds_bucket{cluster="cluster",instance="shared-instance",tenant="first",job="kubelet",le="+Inf"}'
+    values: '30+1x10'
+  - series: 'kubelet_node_name{cluster="cluster",instance="shared-instance",tenant="first",node="node-first",job="kubelet"}'
+    values: '1x10'
+  - series: 'kubelet_pleg_relist_duration_seconds_bucket{cluster="cluster",instance="shared-instance",tenant="second",job="kubelet",le="10"}'
+    values: '1+0x10'
+  - series: 'kubelet_pleg_relist_duration_seconds_bucket{cluster="cluster",instance="shared-instance",tenant="second",job="kubelet",le="+Inf"}'
+    values: '30+1x10'
+  - series: 'kubelet_node_name{cluster="cluster",instance="shared-instance",tenant="second",node="node-second",job="kubelet"}'
+    values: '1x10'
+  promql_expr_test:
+  - eval_time: 10m
+    expr: node_quantile:kubelet_pleg_relist_duration_seconds:histogram_quantile{quantile="0.99"}
+    exp_samples:
+    - value: 10
+      labels: 'node_quantile:kubelet_pleg_relist_duration_seconds:histogram_quantile{cluster="cluster",instance="shared-instance",node="node-first",quantile="0.99",tenant="first"}'
+    - value: 10
+      labels: 'node_quantile:kubelet_pleg_relist_duration_seconds:histogram_quantile{cluster="cluster",instance="shared-instance",node="node-second",quantile="0.99",tenant="second"}'
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: KubeletPlegDurationHigh
+    exp_alerts:
     - exp_labels:
         cluster: "cluster"
-        long: "1h"
-        severity: "critical"
-        short: "5m"
+        instance: "shared-instance"
+        node: "node-first"
+        quantile: "0.99"
+        severity: "warning"
+        tenant: "first"
+      exp_annotations:
+        description: "The Kubelet Pod Lifecycle Event Generator has a 99th percentile duration of 10 seconds on node node-first on cluster cluster."
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletplegdurationhigh"
+        summary: "Kubelet Pod Lifecycle Event Generator is taking too long to relist."
+    - exp_labels:
+        cluster: "cluster"
+        instance: "shared-instance"
+        node: "node-second"
+        quantile: "0.99"
+        severity: "warning"
         tenant: "second"
       exp_annotations:
-        description: "The Kube API server is burning too much error budget on cluster cluster."
-        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
-        summary: "The Kube API server is burning too much error budget."
+        description: "The Kubelet Pod Lifecycle Event Generator has a 99th percentile duration of 10 seconds on node node-second on cluster cluster."
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletplegdurationhigh"
+        summary: "Kubelet Pod Lifecycle Event Generator is taking too long to relist."
 
 - name: additional grouping isolates persistent volume exclusions
   interval: 1m
