@@ -23,6 +23,7 @@ local utils = import '../lib/utils.libsonnet';
     ),
     local config = $._config {
       groupingCluster: groupingLabels([$._config.clusterLabel]),
+      groupingMemoryCluster: groupingLabels([$._config.clusterLabel], ['instance']),
       groupingClusterInstance: groupingLabels([$._config.clusterLabel, 'instance']),
       groupingClusterInstanceCore: groupingLabels([$._config.clusterLabel, 'instance', 'core']),
       groupingClusterInstanceVolume: groupingLabels([$._config.clusterLabel, 'instance', 'volume']),
@@ -121,13 +122,14 @@ local utils = import '../lib/utils.libsonnet';
             ||| % config,
           },
           {
-            // Memory utilisation per node, normalized by per-node memory
+            // Memory utilisation contribution per node, normalized by memory in its cluster and configured groups.
+            // The previous scalar denominator mixed memory from every cluster before additional grouping existed.
             record: 'node:windows_node_memory_utilisation:ratio',
             expr: |||
               (node:windows_node_memory_bytes_total:sum - node:windows_node_memory_bytes_available:sum)
-              /
-              scalar(sum(node:windows_node_memory_bytes_total:sum))
-            |||,
+              / on (%(groupingMemoryCluster)s) group_left()
+              sum by (%(groupingMemoryCluster)s) (node:windows_node_memory_bytes_total:sum)
+            ||| % config,
           },
           {
             record: 'node:windows_node_memory_utilisation:',

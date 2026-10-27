@@ -62,6 +62,70 @@ tests:
     - value: 20
       labels: 'windows_pod_container_available{cluster="cluster",container="app-second",container_id="shared-id",job="kubernetes-windows-exporter",namespace="monitoring",pod="pod-second",tenant="second"}'
 
+- name: Windows memory contribution is normalized per cluster instead of globally
+  interval: 1m
+  input_series:
+  - series: 'windows_os_visible_memory_bytes{cluster="first",instance="first-instance",job="kubernetes-windows-exporter"}'
+    values: '100 100'
+  - series: 'windows_memory_available_bytes{cluster="first",instance="first-instance",job="kubernetes-windows-exporter"}'
+    values: '25 25'
+  - series: 'windows_os_visible_memory_bytes{cluster="first",instance="second-instance",job="kubernetes-windows-exporter"}'
+    values: '300 300'
+  - series: 'windows_memory_available_bytes{cluster="first",instance="second-instance",job="kubernetes-windows-exporter"}'
+    values: '300 300'
+  - series: 'windows_os_visible_memory_bytes{cluster="second",instance="first-instance",job="kubernetes-windows-exporter"}'
+    values: '400 400'
+  - series: 'windows_memory_available_bytes{cluster="second",instance="first-instance",job="kubernetes-windows-exporter"}'
+    values: '300 300'
+  - series: 'windows_os_visible_memory_bytes{cluster="second",instance="second-instance",job="kubernetes-windows-exporter"}'
+    values: '100 100'
+  - series: 'windows_memory_available_bytes{cluster="second",instance="second-instance",job="kubernetes-windows-exporter"}'
+    values: '0 0'
+  promql_expr_test:
+  - eval_time: 1m
+    expr: node:windows_node_memory_utilisation:ratio
+    exp_samples:
+    - value: 0.1875
+      labels: 'node:windows_node_memory_utilisation:ratio{cluster="first",instance="first-instance"}'
+    - value: 0
+      labels: 'node:windows_node_memory_utilisation:ratio{cluster="first",instance="second-instance"}'
+    - value: 0.2
+      labels: 'node:windows_node_memory_utilisation:ratio{cluster="second",instance="first-instance"}'
+    - value: 0.2
+      labels: 'node:windows_node_memory_utilisation:ratio{cluster="second",instance="second-instance"}'
+
+- name: additional grouping isolates Windows memory normalization
+  interval: 1m
+  input_series:
+  - series: 'windows_os_visible_memory_bytes{cluster="cluster",instance="first-instance",tenant="first",job="kubernetes-windows-exporter"}'
+    values: '100 100'
+  - series: 'windows_memory_available_bytes{cluster="cluster",instance="first-instance",tenant="first",job="kubernetes-windows-exporter"}'
+    values: '25 25'
+  - series: 'windows_os_visible_memory_bytes{cluster="cluster",instance="second-instance",tenant="first",job="kubernetes-windows-exporter"}'
+    values: '300 300'
+  - series: 'windows_memory_available_bytes{cluster="cluster",instance="second-instance",tenant="first",job="kubernetes-windows-exporter"}'
+    values: '300 300'
+  - series: 'windows_os_visible_memory_bytes{cluster="cluster",instance="first-instance",tenant="second",job="kubernetes-windows-exporter"}'
+    values: '400 400'
+  - series: 'windows_memory_available_bytes{cluster="cluster",instance="first-instance",tenant="second",job="kubernetes-windows-exporter"}'
+    values: '300 300'
+  - series: 'windows_os_visible_memory_bytes{cluster="cluster",instance="second-instance",tenant="second",job="kubernetes-windows-exporter"}'
+    values: '100 100'
+  - series: 'windows_memory_available_bytes{cluster="cluster",instance="second-instance",tenant="second",job="kubernetes-windows-exporter"}'
+    values: '0 0'
+  promql_expr_test:
+  - eval_time: 1m
+    expr: node:windows_node_memory_utilisation:ratio
+    exp_samples:
+    - value: 0.1875
+      labels: 'node:windows_node_memory_utilisation:ratio{cluster="cluster",instance="first-instance",tenant="first"}'
+    - value: 0
+      labels: 'node:windows_node_memory_utilisation:ratio{cluster="cluster",instance="second-instance",tenant="first"}'
+    - value: 0.2
+      labels: 'node:windows_node_memory_utilisation:ratio{cluster="cluster",instance="first-instance",tenant="second"}'
+    - value: 0.2
+      labels: 'node:windows_node_memory_utilisation:ratio{cluster="cluster",instance="second-instance",tenant="second"}'
+
 - name: additional grouping isolates pod alerts and label enrichment
   interval: 1m
   input_series:

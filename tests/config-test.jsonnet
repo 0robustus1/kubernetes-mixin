@@ -104,6 +104,29 @@ local additionalGrouping = (mixin + (import '../rules/windows.libsonnet')) {
   },
 };
 
+// Windows memory contribution is normalized within each cluster and configured group. The
+// scalar denominator used before additional grouping also mixed otherwise independent clusters.
+local defaultWindowsMemory = findRule((mixin + (import '../rules/windows.libsonnet')).prometheusRules.groups, 'node:windows_node_memory_utilisation:ratio');
+assert std.length(std.findSubstr('on (cluster) group_left()', defaultWindowsMemory.expr)) == 1;
+assert std.length(std.findSubstr('sum by (cluster) (node:windows_node_memory_bytes_total:sum)', defaultWindowsMemory.expr)) == 1;
+assert std.length(std.findSubstr('scalar(', defaultWindowsMemory.expr)) == 0;
+local groupedWindowsMemory = findRule(additionalGrouping.prometheusRules.groups, 'node:windows_node_memory_utilisation:ratio');
+assert std.length(std.findSubstr('on (cluster, tenant, namespace) group_left()', groupedWindowsMemory.expr)) == 1;
+assert std.length(std.findSubstr('sum by (cluster, tenant, namespace) (node:windows_node_memory_bytes_total:sum)', groupedWindowsMemory.expr)) == 1;
+assert std.length(std.findSubstr('on (cluster, instance', groupedWindowsMemory.expr)) == 0;
+local groupingWithInstance = (mixin + (import '../rules/windows.libsonnet')) {
+  _config+:: {
+    additionalGrouping+: {
+      recordingRules: ['instance'],
+    },
+  },
+};
+local instanceGroupedWindowsMemory = findRule(groupingWithInstance.prometheusRules.groups, 'node:windows_node_memory_utilisation:ratio');
+assert std.length(std.findSubstr('on (cluster) group_left()', instanceGroupedWindowsMemory.expr)) == 1;
+assert std.length(std.findSubstr('sum by (cluster) (node:windows_node_memory_bytes_total:sum)', instanceGroupedWindowsMemory.expr)) == 1;
+local instanceGroupedWindowsTotal = findRule(groupingWithInstance.prometheusRules.groups, 'node:windows_node_memory_bytes_total:sum');
+assert std.length(std.findSubstr('sum by (cluster, instance)', instanceGroupedWindowsTotal.expr)) == 1;
+
 // Labels supplied through group_left remain payload labels instead of becoming match keys, and
 // labels overwritten by a recording rule are not retained as additional dimensions.
 local conflictingGrouping = (mixin + (import '../rules/windows.libsonnet')) {
