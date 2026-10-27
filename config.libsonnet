@@ -118,7 +118,9 @@
       networkUnitLabel: if self.networkMultiplier == 1 then 'Bytes' else 'Bits',
     },
 
-    // Opt-in to multiCluster dashboards by overriding this and the clusterLabel.
+    // Opt in to multi-cluster dashboards and cluster-aware resource overcommit alerts.
+    // Supported additional alert grouping dimensions are retained by overcommit alerts
+    // only when this is enabled.
     showMultiCluster: false,
     clusterLabel: 'cluster',
 
@@ -165,6 +167,7 @@
       // Additional groups for `by` and required `on` expressions in alertingRules.
       // Generation fails when a configured label is removed by a `without` aggregation.
       // Recording-backed alerts also require the label in `recordingRules`.
+      // Resource overcommit alerts apply these groups only when `showMultiCluster` is enabled.
       alertingRules: [],
 
       // Additional groups for `by` expressions in dashboards

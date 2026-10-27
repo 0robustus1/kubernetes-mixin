@@ -17,6 +17,7 @@ local mixin = import '../mixin.libsonnet';
 
 local configured = mixin {
   _config+:: {
+    // Resource overcommit alerts retain additional grouping only in multi-cluster mode.
     showMultiCluster: true,
     additionalGrouping+: {
       recordingRules: ['tenant'],

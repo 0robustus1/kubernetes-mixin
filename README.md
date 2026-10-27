@@ -250,10 +250,23 @@ TODO
 Kubernetes-mixin can support dashboards across multiple clusters. You need either a multi-cluster [Thanos](https://github.com/improbable-eng/thanos) installation with `external_labels` configured or a [Cortex](https://github.com/cortexproject/cortex) system where a cluster label exists. To enable this feature you need to configure the following:
 
 ```jsonnet
-    // Opt-in to multiCluster dashboards by overriding this and the clusterLabel.
+    // Opt in to multi-cluster dashboards and cluster-aware resource overcommit alerts.
     showMultiCluster: true,
     clusterLabel: '<your cluster label>',
 ```
+
+`showMultiCluster` also selects the cluster-aware resource overcommit alert expressions. These expressions group by the cluster label and supported `additionalGrouping.alertingRules` dimensions. When `showMultiCluster` is `false`, resource overcommit alerts intentionally use global single-cluster aggregations and do not retain additional grouping labels.
+
+Additional dimensions can be retained in recording and alerting rules with:
+
+```jsonnet
+    additionalGrouping+: {
+      recordingRules: ['tenant'],
+      alertingRules: ['tenant'],
+    },
+```
+
+Labels used by recording-backed alerts must be configured in both lists. Rule generation fails when a configured label would be removed by a `without` aggregation. Resource overcommit alerts retain supported additional dimensions only when `showMultiCluster` is enabled.
 
 ## Customising the mixin
 

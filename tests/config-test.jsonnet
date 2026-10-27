@@ -220,9 +220,11 @@ local groupedQuota = findAlert(alertGroups, 'KubeQuotaAlmostFull');
 assert std.length(std.findSubstr('topk by (cluster, namespace, resource, resourcequota, tenant)', groupedQuota.expr)) == 2;
 assert std.length(std.findSubstr('on (cluster, namespace, resource, resourcequota, tenant)', groupedQuota.expr)) == 1;
 assert std.length(std.findSubstr('max without (instance, job, type)', groupedQuota.expr)) == 2;
-local groupedSingleClusterOvercommit = findAlert(alertGroups, 'KubeCPUOvercommit');
-assert std.length(std.findSubstr('count(max by (node)', groupedSingleClusterOvercommit.expr)) == 1;
-assert std.length(std.findSubstr('by (node, tenant)', groupedSingleClusterOvercommit.expr)) == 0;
+// Single-cluster overcommit alerts intentionally aggregate globally. Additional dimensions are
+// retained only by the multi-cluster expressions.
+local singleClusterOvercommit = findAlert(alertGroups, 'KubeCPUOvercommit');
+assert std.length(std.findSubstr('count(max by (node)', singleClusterOvercommit.expr)) == 1;
+assert std.length(std.findSubstr('by (node, tenant)', singleClusterOvercommit.expr)) == 0;
 
 local multiClusterAlertGrouping = mixin {
   _config+:: {

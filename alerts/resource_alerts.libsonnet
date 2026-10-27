@@ -93,6 +93,8 @@ local utils = import '../lib/utils.libsonnet';
       )
     ||| % config { resource: resource }
   else
+    // Single-cluster mode intentionally aggregates globally and does not retain
+    // configured additional grouping dimensions.
     |||
       # Non-HA clusters.
       (
@@ -131,6 +133,8 @@ local utils = import '../lib/utils.libsonnet';
       ) > %(namespaceOvercommitFactor)s
     ||| % config { resource: resource }
   else
+    // Single-cluster mode intentionally aggregates globally and does not retain
+    // configured additional grouping dimensions.
     |||
       sum (
         min without(resource) (kube_resourcequota{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s, type="hard", resource=~"(%(resource)s|requests.%(resource)s)"})
