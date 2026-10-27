@@ -114,7 +114,9 @@ local groupedWindowsMemory = findRule(additionalGrouping.prometheusRules.groups,
 assert std.length(std.findSubstr('on (cluster, tenant, namespace) group_left()', groupedWindowsMemory.expr)) == 1;
 assert std.length(std.findSubstr('sum by (cluster, tenant, namespace) (node:windows_node_memory_bytes_total:sum)', groupedWindowsMemory.expr)) == 1;
 assert std.length(std.findSubstr('on (cluster, instance', groupedWindowsMemory.expr)) == 0;
-local groupingWithInstance = (mixin + (import '../rules/windows.libsonnet')) {
+// Render the Windows rules in isolation because `instance` is invalid for the complete mixin:
+// kube-scheduler's `without(instance, pod)` aggregation cannot preserve it.
+local groupingWithInstance = ((import '../config.libsonnet') + (import '../rules/windows.libsonnet')) {
   _config+:: {
     additionalGrouping+: {
       recordingRules: ['instance'],
@@ -128,8 +130,17 @@ local instanceGroupedWindowsTotal = findRule(groupingWithInstance.prometheusRule
 assert std.length(std.findSubstr('sum by (cluster, instance)', instanceGroupedWindowsTotal.expr)) == 1;
 
 // Labels supplied through group_left remain payload labels instead of becoming match keys, and
-// labels overwritten by a recording rule are not retained as additional dimensions.
-local conflictingGrouping = (mixin + (import '../rules/windows.libsonnet')) {
+// labels overwritten by a recording rule are not retained as additional dimensions. Render the
+// applicable recording rules without kube-scheduler, whose `without(instance, pod)` aggregation
+// intentionally rejects this conflict-focused configuration.
+local conflictingGrouping = (
+  (import '../config.libsonnet') +
+  (import '../rules/kube_apiserver.libsonnet') +
+  (import '../rules/apps.libsonnet') +
+  (import '../rules/node.libsonnet') +
+  (import '../rules/kubelet.libsonnet') +
+  (import '../rules/windows.libsonnet')
+) {
   _config+:: {
     additionalGrouping+: {
       recordingRules: ['node', 'owner_name', 'owner_kind', 'container', 'pod', 'namespace', 'verb', 'quantile', 'workload_type'],

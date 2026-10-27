@@ -191,6 +191,42 @@ clean:
 .PHONY: config-test
 config-test: $(JSONNET_BIN) $(JSONNET_VENDOR)
 	@$(JSONNET_BIN) -J vendor tests/config-test.jsonnet > /dev/null
+	@output=$$($(JSONNET_BIN) -J vendor --ext-str groupingLabel=mode --ext-str podLabel=pod tests/invalid-recording-grouping.jsonnet 2>&1); status=$$?; \
+		if [ $$status -eq 0 ]; then \
+			echo 'expected invalid node recording rule grouping configuration to fail'; \
+			exit 1; \
+		fi; \
+		case "$$output" in \
+			*'additionalGrouping.recordingRules contains labels removed by without() aggregations in node rules: mode'*) ;; \
+			*) echo "$$output"; exit 1 ;; \
+		esac
+	@output=$$($(JSONNET_BIN) -J vendor --ext-str groupingLabel=instance --ext-str podLabel=pod tests/invalid-recording-grouping.jsonnet 2>&1); status=$$?; \
+		if [ $$status -eq 0 ]; then \
+			echo 'expected invalid kube-scheduler recording rule grouping configuration to fail'; \
+			exit 1; \
+		fi; \
+		case "$$output" in \
+			*'additionalGrouping.recordingRules contains labels removed by without() aggregations in kube-scheduler rules: instance'*) ;; \
+			*) echo "$$output"; exit 1 ;; \
+		esac
+	@output=$$($(JSONNET_BIN) -J vendor --ext-str groupingLabel=pod --ext-str podLabel=pod tests/invalid-recording-grouping.jsonnet 2>&1); status=$$?; \
+		if [ $$status -eq 0 ]; then \
+			echo 'expected invalid kube-scheduler recording rule grouping configuration to fail'; \
+			exit 1; \
+		fi; \
+		case "$$output" in \
+			*'additionalGrouping.recordingRules contains labels removed by without() aggregations in kube-scheduler rules: pod'*) ;; \
+			*) echo "$$output"; exit 1 ;; \
+		esac
+	@output=$$($(JSONNET_BIN) -J vendor --ext-str groupingLabel=scheduler_pod --ext-str podLabel=scheduler_pod tests/invalid-recording-grouping.jsonnet 2>&1); status=$$?; \
+		if [ $$status -eq 0 ]; then \
+			echo 'expected custom pod label recording rule grouping configuration to fail'; \
+			exit 1; \
+		fi; \
+		case "$$output" in \
+			*'additionalGrouping.recordingRules contains labels removed by without() aggregations in kube-scheduler rules: scheduler_pod'*) ;; \
+			*) echo "$$output"; exit 1 ;; \
+		esac
 	@output=$$($(JSONNET_BIN) -J vendor --ext-str groupingLabel=job tests/invalid-alert-grouping.jsonnet 2>&1); status=$$?; \
 		if [ $$status -eq 0 ]; then \
 			echo 'expected invalid alert grouping configuration to fail'; \

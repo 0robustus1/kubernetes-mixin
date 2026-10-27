@@ -23,9 +23,15 @@ local utils = import '../lib/utils.libsonnet';
   },
 
   prometheusRules+:: {
+    local additionalGrouping = utils.rejectLabelsExcludedByWithout(
+      $._config.additionalGrouping.recordingRules,
+      ['mode'],
+      'node rules',
+      'additionalGrouping.recordingRules'
+    ),
     local groupingLabels(labels, excludedAdditionalLabels=[]) = utils.groupingLabels(
       labels,
-      utils.withoutLabels($._config.additionalGrouping.recordingRules, excludedAdditionalLabels)
+      utils.withoutLabels(additionalGrouping, excludedAdditionalLabels)
     ),
     local config = $._config {
       groupingCluster: groupingLabels([$._config.clusterLabel]),

@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+local utils = import '../lib/utils.libsonnet';
+
 {
   _config+:: {
     kubeSchedulerSelector: 'job="kube-scheduler"',
@@ -20,6 +22,13 @@
   },
 
   prometheusRules+:: {
+    assert utils.rejectLabelsExcludedByWithout(
+      $._config.additionalGrouping.recordingRules,
+      ['instance', $._config.podLabel],
+      'kube-scheduler rules',
+      'additionalGrouping.recordingRules'
+    ) == $._config.additionalGrouping.recordingRules,
+
     groups+: [
       {
         name: 'kube-scheduler.rules',

@@ -38,7 +38,7 @@
   withoutLabels(labels, excludedLabels):
     [label for label in labels if !std.member(excludedLabels, label)],
 
-  rejectLabelsExcludedByWithout(labels, excludedLabels, context):
+  rejectLabelsExcludedByWithout(labels, excludedLabels, context, groupingConfig='additionalGrouping.alertingRules'):
     local conflicts = std.foldl(
       function(conflicts, label)
         if std.member(excludedLabels, label) && !std.member(conflicts, label)
@@ -48,7 +48,7 @@
       []
     );
     if std.length(conflicts) > 0
-    then error 'additionalGrouping.alertingRules contains labels removed by without() aggregations in %s: %s' % [context, std.join(', ', conflicts)]
+    then error '%s contains labels removed by without() aggregations in %s: %s' % [groupingConfig, context, std.join(', ', conflicts)]
     else labels,
 
   requireAlertGroupingInRecordingRules(labels, recordingLabels, context):

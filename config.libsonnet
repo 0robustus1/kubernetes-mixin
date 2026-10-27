@@ -158,7 +158,8 @@
 
     // Additional grouping instructions for `by` and `on` expressions.
     additionalGrouping: {
-      // Additional groups for `by` and `on` expressions in recordingRules
+      // Additional groups for `by` and `on` expressions in recordingRules.
+      // Generation fails when a configured label is removed by a `without` aggregation.
       recordingRules: [],
 
       // Additional groups for `by` and required `on` expressions in alertingRules.
