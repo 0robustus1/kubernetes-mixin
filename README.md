@@ -266,6 +266,20 @@ Additional dimensions can be retained in recording and alerting rules with:
     },
 ```
 
+`additionalGrouping.recordingRules` and `additionalGrouping.alertingRules` preserve labels
+that are already present on the metrics used by a rule. A configured label must be present,
+with the same meaning, on every metric and intermediate recording rule involved in the
+relevant aggregations and binary operations. The mixin only adds configured labels to
+`by(...)` and `on(...)` clauses; it does not copy a label that exists on only one operand by
+adding `group_left(...)` or `group_right(...)`.
+
+A query-visible label such as `tenant`, when applied consistently to every input series, is a
+typical use case. The label may come from the metrics themselves or from a query layer such
+as Thanos; Prometheus external labels alone are not available during local rule evaluation.
+A metric-specific label such as `owner_name` or `container_id` is not supported when another
+operand in the same query does not carry it. Configuring such a one-sided label can produce
+no result or change the cardinality and meaning of the resulting recording or alerting rule.
+
 Labels used by recording-backed alerts must be configured in both lists. Rule generation fails when a configured label would be removed by a `without` aggregation. Resource overcommit alerts retain supported additional dimensions only when `showMultiCluster` is enabled.
 
 ## Customising the mixin

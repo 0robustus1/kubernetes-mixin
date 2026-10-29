@@ -161,10 +161,13 @@
     // Additional grouping instructions for `by` and `on` expressions.
     additionalGrouping: {
       // Additional groups for `by` and `on` expressions in recordingRules.
+      // Labels must already exist on every metric and intermediate rule in a query;
+      // one-sided labels are not propagated with `group_left` or `group_right`.
       // Generation fails when a configured label is removed by a `without` aggregation.
       recordingRules: [],
 
       // Additional groups for `by` and required `on` expressions in alertingRules.
+      // The same label-presence and no-propagation constraints as recordingRules apply.
       // Generation fails when a configured label is removed by a `without` aggregation.
       // Recording-backed alerts also require the label in `recordingRules`.
       // Resource overcommit alerts apply these groups only when `showMultiCluster` is enabled.
