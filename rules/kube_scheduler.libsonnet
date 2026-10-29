@@ -22,12 +22,18 @@ local utils = import '../lib/utils.libsonnet';
   },
 
   prometheusRules+:: {
-    assert utils.rejectLabelsExcludedByWithout(
+    local configuredAdditionalGrouping = utils.rejectLabelsExcludedByWithout(
       $._config.additionalGrouping.recordingRules,
       ['instance', $._config.podLabel],
       'kube-scheduler rules',
       'additionalGrouping.recordingRules'
-    ) == $._config.additionalGrouping.recordingRules,
+    ),
+    assert utils.rejectGroupingLabels(
+      configuredAdditionalGrouping,
+      ['__name__', 'le', 'quantile'],
+      'kube-scheduler recording rules',
+      'additionalGrouping.recordingRules'
+    ) == configuredAdditionalGrouping,
 
     groups+: [
       {

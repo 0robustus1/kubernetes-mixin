@@ -273,6 +273,13 @@ relevant aggregations and binary operations. The mixin only adds configured labe
 `by(...)` and `on(...)` clauses; it does not copy a label that exists on only one operand by
 adding `group_left(...)` or `group_right(...)`.
 
+These settings extend only expressions that already surface labels through grouping or
+matching. They do not introduce grouping into expressions that have no existing `by(...)` or
+`on(...)` clause, including direct expressions, `absent()` alerts, and the global
+single-cluster resource overcommit expressions. Those expressions remain unchanged. When a
+grouping-aware rule is known to consume, overwrite, or otherwise be unable to preserve a
+configured label, rendering fails instead of silently omitting that label.
+
 A query-visible label such as `tenant`, when applied consistently to every input series, is a
 typical use case. The label may come from the metrics themselves or from a query layer such
 as Thanos; Prometheus external labels alone are not available during local rule evaluation.

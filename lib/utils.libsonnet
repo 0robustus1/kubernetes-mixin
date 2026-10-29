@@ -38,6 +38,19 @@
   withoutLabels(labels, excludedLabels):
     [label for label in labels if !std.member(excludedLabels, label)],
 
+  rejectGroupingLabels(labels, rejectedLabels, context, groupingConfig):
+    local conflicts = std.foldl(
+      function(conflicts, label)
+        if std.member(rejectedLabels, label) && !std.member(conflicts, label)
+        then conflicts + [label]
+        else conflicts,
+      labels,
+      []
+    );
+    if std.length(conflicts) > 0
+    then error '%s contains labels that cannot be preserved in %s: %s' % [groupingConfig, context, std.join(', ', conflicts)]
+    else labels,
+
   rejectLabelsExcludedByWithout(labels, excludedLabels, context, groupingConfig='additionalGrouping.alertingRules'):
     local conflicts = std.foldl(
       function(conflicts, label)

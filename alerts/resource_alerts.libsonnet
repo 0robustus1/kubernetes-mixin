@@ -21,46 +21,70 @@ local utils = import '../lib/utils.libsonnet';
     ['resource', 'instance', 'job', 'type', 'id', 'metrics_path', 'name', 'image', 'endpoint', 'node'],
     'kubernetes-resources alerts'
   ),
-  local additionalGrouping = utils.withoutLabels(configuredAdditionalGrouping, ['alertname', 'severity']),
-  local overcommitAdditionalGrouping = utils.withoutLabels(additionalGrouping, [
-    $._config.clusterLabel,
-    $._config.namespaceLabel,
-    'namespace',
-    'pod',
-    'container',
-    'workload',
-    'workload_type',
-    'owner_name',
-    'owner_kind',
-    'replicaset',
-    'job_name',
-    'daemonset',
-    'deployment',
-    'statefulset',
-    'horizontalpodautoscaler',
-    'poddisruptionbudget',
-    'phase',
-    'condition',
-    'reason',
-    'uid',
-    'priority',
-    'priority_class',
-    'scheduler',
-    'resourcequota',
-    'role',
-    'unit',
-  ]),
-  local recordedOvercommitAdditionalGrouping = utils.requireAlertGroupingInRecordingRules(
-    overcommitAdditionalGrouping,
-    $._config.additionalGrouping.recordingRules,
-    'KubeCPUOvercommit and KubeMemoryOvercommit'
+  local additionalGrouping = utils.rejectGroupingLabels(
+    configuredAdditionalGrouping,
+    ['__name__', 'alertname', 'severity'],
+    'kubernetes-resources alerting rules',
+    'additionalGrouping.alertingRules'
   ),
+  local overcommitAdditionalGrouping =
+    if $._config.showMultiCluster
+    then utils.rejectGroupingLabels(
+      additionalGrouping,
+      [
+        $._config.namespaceLabel,
+        'namespace',
+        'pod',
+        'container',
+        'workload',
+        'workload_type',
+        'owner_name',
+        'owner_kind',
+        'replicaset',
+        'job_name',
+        'daemonset',
+        'deployment',
+        'statefulset',
+        'horizontalpodautoscaler',
+        'poddisruptionbudget',
+        'phase',
+        'condition',
+        'reason',
+        'uid',
+        'priority',
+        'priority_class',
+        'scheduler',
+        'resourcequota',
+        'role',
+        'unit',
+      ],
+      'multi-cluster CPU and memory overcommit alerts',
+      'additionalGrouping.alertingRules'
+    )
+    else [],
+  local quotaOvercommitAdditionalGrouping =
+    if $._config.showMultiCluster
+    then utils.rejectGroupingLabels(
+      additionalGrouping,
+      [$._config.namespaceLabel, 'namespace', 'resourcequota', 'unit'],
+      'multi-cluster quota overcommit alerts',
+      'additionalGrouping.alertingRules'
+    )
+    else [],
+  local recordedOvercommitAdditionalGrouping =
+    if $._config.showMultiCluster
+    then utils.requireAlertGroupingInRecordingRules(
+      utils.withoutLabels(overcommitAdditionalGrouping, [$._config.clusterLabel]),
+      $._config.additionalGrouping.recordingRules,
+      'KubeCPUOvercommit and KubeMemoryOvercommit'
+    )
+    else [],
   local groupingLabels(labels, excludedAdditionalLabels=[]) =
     utils.groupingLabels(labels, utils.withoutLabels(additionalGrouping, excludedAdditionalLabels)),
   local config = $._config {
     groupingClusterOvercommit: utils.groupingLabels([$._config.clusterLabel], recordedOvercommitAdditionalGrouping),
     groupingClusterNodeOvercommit: utils.groupingLabels([$._config.clusterLabel, 'node'], recordedOvercommitAdditionalGrouping),
-    groupingClusterQuotaOvercommit: groupingLabels([$._config.clusterLabel], ['namespace', 'resourcequota', 'unit']),
+    groupingClusterQuotaOvercommit: utils.groupingLabels([$._config.clusterLabel], quotaOvercommitAdditionalGrouping),
     groupingQuotaIdentity: groupingLabels([$._config.clusterLabel, $._config.namespaceLabel, 'resource', 'resourcequota']),
     groupingContainerIdentity: groupingLabels([$._config.clusterLabel, $._config.namespaceLabel, 'pod', 'container', 'instance']),
   },

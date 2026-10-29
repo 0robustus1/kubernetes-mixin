@@ -29,18 +29,29 @@ local utils = import '../lib/utils.libsonnet';
       [$._config.namespaceLabel, 'service', 'endpoint'],
       'kube-apiserver alerts'
     ),
-    local additionalGrouping = utils.withoutLabels(configuredAdditionalGrouping, ['alertname', 'severity', 'short', 'long']),
-    local burnrateAdditionalGrouping = utils.requireAlertGroupingInRecordingRules(
-      utils.withoutLabels(additionalGrouping, [$._config.clusterLabel, 'code', 'le', 'resource', 'scope', 'verb']),
-      $._config.additionalGrouping.recordingRules,
-      'KubeAPIErrorBudgetBurn'
+    local additionalGrouping = utils.rejectGroupingLabels(
+      configuredAdditionalGrouping,
+      ['__name__', 'alertname', 'code', 'le', 'severity'] +
+      if std.length($._config.SLOs.apiserver.windows) > 0
+      then ['long', 'resource', 'scope', 'short']
+      else [],
+      'kube-apiserver alerting rules',
+      'additionalGrouping.alertingRules'
     ),
+    local burnrateAdditionalGrouping =
+      local recordingBackedGrouping = utils.withoutLabels(additionalGrouping, [$._config.clusterLabel, 'verb']);
+      assert utils.requireAlertGroupingInRecordingRules(
+        recordingBackedGrouping,
+        $._config.additionalGrouping.recordingRules,
+        'KubeAPIErrorBudgetBurn'
+      ) == recordingBackedGrouping;
+      additionalGrouping,
     local groupingLabels(labels, excludedAdditionalLabels=[]) =
       utils.groupingLabels(labels, utils.withoutLabels(additionalGrouping, excludedAdditionalLabels)),
     local config = $._config {
       groupingCluster: groupingLabels([$._config.clusterLabel]),
       groupingBurnrate: utils.groupingLabels([$._config.clusterLabel], burnrateAdditionalGrouping),
-      matchingCertificate: groupingLabels(['job', $._config.clusterLabel, 'instance'], ['le']),
+      matchingCertificate: groupingLabels(['job', $._config.clusterLabel, 'instance']),
       groupingAggregatedAPIErrors: groupingLabels([$._config.clusterLabel, 'instance', 'name', 'reason']),
       groupingAggregatedAPIDown: groupingLabels(['name', 'namespace', $._config.clusterLabel]),
     },

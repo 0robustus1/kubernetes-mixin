@@ -129,10 +129,9 @@ assert std.length(std.findSubstr('sum by (cluster) (node:windows_node_memory_byt
 local instanceGroupedWindowsTotal = findRule(groupingWithInstance.prometheusRules.groups, 'node:windows_node_memory_bytes_total:sum');
 assert std.length(std.findSubstr('sum by (cluster, instance)', instanceGroupedWindowsTotal.expr)) == 1;
 
-// Labels supplied through group_left remain payload labels instead of becoming match keys, and
-// labels overwritten by a recording rule are not retained as additional dimensions. Render the
-// applicable recording rules without kube-scheduler, whose `without(instance, pod)` aggregation
-// intentionally rejects this conflict-focused configuration.
+// Labels supplied through group_left remain payload labels instead of becoming match keys.
+// Render the applicable recording rules without kube-scheduler, whose `without(instance, pod)`
+// aggregation intentionally rejects this conflict-focused configuration.
 local conflictingGrouping = (
   (import '../config.libsonnet') +
   (import '../rules/kube_apiserver.libsonnet') +
@@ -143,44 +142,28 @@ local conflictingGrouping = (
 ) {
   _config+:: {
     additionalGrouping+: {
-      recordingRules: ['node', 'owner_name', 'owner_kind', 'container', 'pod', 'namespace', 'verb', 'quantile', 'workload_type'],
+      recordingRules: ['node', 'owner_name', 'owner_kind', 'container', 'pod', 'namespace'],
     },
   },
 };
 local conflictingWindowsAvailable = findRule(conflictingGrouping.prometheusRules.groups, 'windows_pod_container_available');
-assert std.length(std.findSubstr('on(container_id, cluster, node, owner_name, owner_kind, verb, quantile, workload_type)', conflictingWindowsAvailable.expr)) == 1;
+assert std.length(std.findSubstr('on(container_id, cluster, node, owner_name, owner_kind)', conflictingWindowsAvailable.expr)) == 1;
 assert std.length(std.findSubstr('group_left(container, pod, namespace)', conflictingWindowsAvailable.expr)) == 1;
 local conflictingAvailability = findRule(conflictingGrouping.prometheusRules.groups, 'apiserver_request:availability30d');
-assert std.length(std.findSubstr('sum by (cluster, node, owner_name, owner_kind, container, pod, namespace, quantile, workload_type)', conflictingAvailability.expr)) > 0;
+assert std.length(std.findSubstr('sum by (cluster, node, owner_name, owner_kind, container, pod, namespace)', conflictingAvailability.expr)) > 0;
 local conflictingKubelet = findRule(conflictingGrouping.prometheusRules.groups, 'node_quantile:kubelet_pleg_relist_duration_seconds:histogram_quantile');
-assert std.length(std.findSubstr('on(cluster, instance, owner_name, owner_kind, container, pod, namespace, verb, workload_type) group_left (node)', conflictingKubelet.expr)) == 1;
+assert std.length(std.findSubstr('on(cluster, instance, owner_name, owner_kind, container, pod, namespace) group_left (node)', conflictingKubelet.expr)) == 1;
 local conflictingNodeCPU = findRule(conflictingGrouping.prometheusRules.groups, 'node:node_num_cpu:sum');
-assert std.length(std.findSubstr('on (cluster, namespace, pod, owner_name, owner_kind, container, verb, quantile, workload_type) group_left(node)', conflictingNodeCPU.expr)) == 1;
-assert std.length(std.findSubstr('topk by(cluster, namespace, pod, owner_name, owner_kind, container, verb, quantile, workload_type)', conflictingNodeCPU.expr)) == 1;
+assert std.length(std.findSubstr('on (cluster, namespace, pod, owner_name, owner_kind, container) group_left(node)', conflictingNodeCPU.expr)) == 1;
+assert std.length(std.findSubstr('topk by(cluster, namespace, pod, owner_name, owner_kind, container)', conflictingNodeCPU.expr)) == 1;
 local conflictingPodPhase = findRule(conflictingGrouping.prometheusRules.groups, 'cluster:namespace:pod_memory:active:kube_pod_container_resource_requests');
-assert std.length(std.findSubstr('on (namespace, pod, cluster, owner_name, owner_kind, verb, quantile)', conflictingPodPhase.expr)) == 1;
+assert std.length(std.findSubstr('on (namespace, pod, cluster, owner_name, owner_kind)', conflictingPodPhase.expr)) == 1;
 local conflictingPodOwners = findRules(conflictingGrouping.prometheusRules.groups, 'namespace_workload_pod:kube_pod_owner:relabel');
 assert std.length(conflictingPodOwners) == 8;
-assert std.length(std.findSubstr('on (cluster, replicaset, namespace, node, container, verb, quantile) group_left(owner_name) topk by(cluster, replicaset, namespace, node, container, verb, quantile)', conflictingPodOwners[0].expr)) == 1;
-assert std.length(std.findSubstr('on (cluster, namespace, job_name, node, container, verb, quantile) group_left()', conflictingPodOwners[4].expr)) == 1;
-assert std.length(std.findSubstr('group by (cluster, namespace, job_name, node, container, verb, quantile)', conflictingPodOwners[4].expr)) == 1;
-assert std.length(std.findSubstr('on (cluster, namespace, job_name, node, container, verb, quantile) group_left(owner_kind, owner_name)', conflictingPodOwners[7].expr)) == 1;
-
-// Labels with different meanings across API-server SLO operands do not split only one side of
-// the arithmetic. Other additional dimensions continue to be retained.
-local sloGrouping = mixin {
-  _config+:: {
-    additionalGrouping+: {
-      recordingRules: ['verb', 'code', 'le', 'resource', 'scope', 'tenant'],
-    },
-  },
-};
-local sloAvailability = findRule(sloGrouping.prometheusRules.groups, 'apiserver_request:availability30d');
-assert std.length(std.findSubstr('sum by (cluster, tenant)', sloAvailability.expr)) > 0;
-assert std.length(std.findSubstr('sum by (cluster, tenant,', sloAvailability.expr)) == 0;
-local sloBadEvents = findRule(sloGrouping.prometheusRules.groups, 'cluster_verb:apiserver_request_sli_bad_events:rate5m');
-assert std.length(std.findSubstr('sum by (cluster, tenant)', sloBadEvents.expr)) > 0;
-assert std.length(std.findSubstr('sum by (cluster, tenant,', sloBadEvents.expr)) == 0;
+assert std.length(std.findSubstr('on (cluster, replicaset, namespace, node, container) group_left(owner_name) topk by(cluster, replicaset, namespace, node, container)', conflictingPodOwners[0].expr)) == 1;
+assert std.length(std.findSubstr('on (cluster, namespace, job_name, node, container) group_left()', conflictingPodOwners[4].expr)) == 1;
+assert std.length(std.findSubstr('group by (cluster, namespace, job_name, node, container)', conflictingPodOwners[4].expr)) == 1;
+assert std.length(std.findSubstr('on (cluster, namespace, job_name, node, container) group_left(owner_kind, owner_name)', conflictingPodOwners[7].expr)) == 1;
 
 // Aggregations using `without` are outside of additional grouping and remain unchanged.
 assert groupRules(additionalGrouping.prometheusRules.groups, 'kube-scheduler.rules') ==
@@ -208,6 +191,20 @@ assert std.length(std.findSubstr('tenant, tenant', groupedPodNotReady.expr)) == 
 local groupedAPIBurn = findAlerts(alertGroups, 'KubeAPIErrorBudgetBurn')[0];
 assert std.length(std.findSubstr('sum by(cluster, tenant)', groupedAPIBurn.expr)) == 2;
 assert std.length(std.findSubstr('and on(cluster, tenant)', groupedAPIBurn.expr)) == 1;
+
+// Native labels emitted by a recording pipeline remain valid alert-only grouping dimensions.
+local nativeAPIVerbGrouping = ((import '../config.libsonnet') + (import '../alerts/kube_apiserver.libsonnet')) {
+  _config+:: {
+    kubeApiserverSelector: 'job="kube-apiserver"',
+    additionalGrouping+: {
+      alertingRules: ['verb'],
+    },
+  },
+};
+local groupedAPIVerb = findAlerts(nativeAPIVerbGrouping.prometheusAlerts.groups, 'KubeAPIErrorBudgetBurn')[0];
+assert std.length(std.findSubstr('sum by(cluster, verb)', groupedAPIVerb.expr)) == 2;
+assert std.length(std.findSubstr('and on(cluster, verb)', groupedAPIVerb.expr)) == 1;
+
 local groupedCertificate = findAlerts(alertGroups, 'KubeClientCertificateExpiration')[0];
 assert std.length(std.findSubstr('sum without (namespace, service, endpoint)', groupedCertificate.expr)) == 1;
 assert std.length(std.findSubstr('on(job, cluster, instance, tenant)', groupedCertificate.expr)) == 1;
@@ -230,15 +227,25 @@ local multiClusterAlertGrouping = mixin {
   _config+:: {
     showMultiCluster: true,
     additionalGrouping+: {
-      recordingRules: ['tenant', 'pod', 'container', 'phase'],
-      alertingRules: ['tenant', 'pod', 'container', 'phase'],
+      recordingRules: ['tenant'],
+      alertingRules: ['tenant'],
     },
   },
 };
 local groupedMultiClusterOvercommit = findAlert(multiClusterAlertGrouping.prometheusAlerts.groups, 'KubeCPUOvercommit');
 assert std.length(std.findSubstr('sum by(cluster, tenant)', groupedMultiClusterOvercommit.expr)) == 3;
 assert std.length(std.findSubstr('count by (cluster, tenant) (max by (cluster, node, tenant)', groupedMultiClusterOvercommit.expr)) == 1;
-assert std.length(std.findSubstr('cluster, tenant, pod', groupedMultiClusterOvercommit.expr)) == 0;
+
+local nativeClusterAlertGrouping = mixin {
+  _config+:: {
+    showMultiCluster: true,
+    additionalGrouping+: {
+      alertingRules: ['cluster'],
+    },
+  },
+};
+local groupedNativeClusterOvercommit = findAlert(nativeClusterAlertGrouping.prometheusAlerts.groups, 'KubeCPUOvercommit');
+assert std.length(std.findSubstr('sum by(cluster)', groupedNativeClusterOvercommit.expr)) == 3;
 
 local groupedVolume = findAlerts(alertGroups, 'KubePersistentVolumeFillingUp')[0];
 assert std.length(std.findSubstr('unless on(cluster, namespace, persistentvolumeclaim, tenant)', groupedVolume.expr)) == 2;
@@ -255,31 +262,31 @@ local joinedWithoutAlertGrouping = mixin {
 local ungroupedWrappedPod = findAlert(joinedWithoutAlertGrouping.prometheusAlerts.groups, 'KubePodCrashLooping');
 assert std.length(std.findSubstr('on (pod,namespace,cluster) group_left(label_team)', ungroupedWrappedPod.expr)) == 1;
 
-// Query-specific labels remain uniqueness keys, selector labels, static alert labels, or
-// group_left payloads rather than being copied into unsafe matching and grouping lists.
+// Query-specific labels that remain valid dimensions are retained without being copied into
+// unsafe matching lists when they are payload labels.
 local conflictingAlertGrouping = mixin {
   _config+:: {
     additionalGrouping+: {
-      recordingRules: ['owner_kind', 'condition', 'status', 'revision', 'eviction_signal', 'operation_type', 'le', 'code', 'git_version', 'access_mode', 'label_excluded_from_alerts', 'severity', 'alertname', 'label_team', 'tenant'],
-      alertingRules: ['owner_kind', 'condition', 'status', 'revision', 'eviction_signal', 'operation_type', 'le', 'code', 'git_version', 'access_mode', 'label_excluded_from_alerts', 'severity', 'alertname', 'label_team', 'tenant'],
+      recordingRules: ['revision', 'eviction_signal', 'operation_type', 'access_mode', 'label_team', 'tenant'],
+      alertingRules: ['revision', 'eviction_signal', 'operation_type', 'access_mode', 'label_team', 'tenant'],
     },
     common_join_labels: ['label_team'],
   },
 };
 local conflictingAlertGroups = conflictingAlertGrouping.prometheusAlerts.groups;
 local conflictingPodAlert = findAlert(conflictingAlertGroups, 'KubePodNotReady');
-assert std.length(std.findSubstr('on(namespace, pod, cluster, status, revision, eviction_signal, operation_type, le, code, git_version, access_mode, label_excluded_from_alerts, label_team, tenant)', conflictingPodAlert.expr)) == 3;
-assert std.length(std.findSubstr('on (pod, namespace, cluster, owner_kind, condition, status, revision, eviction_signal, operation_type, le, code, git_version, access_mode, label_excluded_from_alerts, tenant) group_left(label_team)', conflictingPodAlert.expr)) == 1;
+assert std.length(std.findSubstr('on(namespace, pod, cluster, revision, eviction_signal, operation_type, access_mode, label_team, tenant)', conflictingPodAlert.expr)) == 3;
+assert std.length(std.findSubstr('on (pod, namespace, cluster, revision, eviction_signal, operation_type, access_mode, tenant) group_left(label_team)', conflictingPodAlert.expr)) == 1;
 local conflictingHPA = findAlert(conflictingAlertGroups, 'KubeHpaMaxedOut');
-assert std.length(std.findSubstr('on(namespace, horizontalpodautoscaler, cluster, owner_kind, revision, eviction_signal, operation_type, le, code, git_version, access_mode, label_excluded_from_alerts, label_team, tenant)', conflictingHPA.expr)) == 2;
+assert std.length(std.findSubstr('on(namespace, horizontalpodautoscaler, cluster, revision, eviction_signal, operation_type, access_mode, label_team, tenant)', conflictingHPA.expr)) == 2;
 local conflictingKubeletLatency = findAlert(conflictingAlertGroups, 'KubeletPodStartUpLatencyHigh');
-assert std.length(std.findSubstr('on(cluster, instance, owner_kind, condition, status, revision, code, git_version, access_mode, label_excluded_from_alerts, label_team, tenant) group_left(node)', conflictingKubeletLatency.expr)) == 1;
+assert std.length(std.findSubstr('on(cluster, instance, revision, access_mode, label_team, tenant) group_left(node)', conflictingKubeletLatency.expr)) == 1;
 local conflictingVersion = findAlert(conflictingAlertGroups, 'KubeVersionMismatch');
-assert std.length(std.findSubstr('count by (cluster, owner_kind, condition, status, revision, eviction_signal, operation_type, le, code, access_mode, label_excluded_from_alerts, label_team, tenant)', conflictingVersion.expr)) == 1;
+assert std.length(std.findSubstr('count by (cluster, revision, eviction_signal, operation_type, access_mode, label_team, tenant)', conflictingVersion.expr)) == 1;
 local conflictingClient = findAlert(conflictingAlertGroups, 'KubeClientErrors');
-assert std.length(std.findSubstr('by (cluster, instance, job, namespace, owner_kind, condition, status, revision, eviction_signal, operation_type, le, git_version, access_mode, label_excluded_from_alerts, label_team, tenant)', conflictingClient.expr)) == 2;
+assert std.length(std.findSubstr('by (cluster, instance, job, namespace, revision, eviction_signal, operation_type, access_mode, label_team, tenant)', conflictingClient.expr)) == 2;
 local conflictingVolume = findAlerts(conflictingAlertGroups, 'KubePersistentVolumeFillingUp')[0];
-assert std.length(std.findSubstr('unless on(cluster, namespace, persistentvolumeclaim, owner_kind, condition, status, revision, eviction_signal, operation_type, le, code, git_version, label_excluded_from_alerts, label_team, tenant)', conflictingVolume.expr)) == 1;
-assert std.length(std.findSubstr('unless on(cluster, namespace, persistentvolumeclaim, owner_kind, condition, status, revision, eviction_signal, operation_type, le, code, git_version, access_mode, label_team, tenant)', conflictingVolume.expr)) == 1;
+assert std.length(std.findSubstr('unless on(cluster, namespace, persistentvolumeclaim, revision, eviction_signal, operation_type, label_team, tenant)', conflictingVolume.expr)) == 1;
+assert std.length(std.findSubstr('unless on(cluster, namespace, persistentvolumeclaim, revision, eviction_signal, operation_type, access_mode, label_team, tenant)', conflictingVolume.expr)) == 1;
 
 true

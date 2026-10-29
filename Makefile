@@ -263,6 +263,33 @@ config-test: $(JSONNET_BIN) $(JSONNET_VENDOR)
 			*'additionalGrouping.alertingRules labels used by recording-backed alerts must also be configured in additionalGrouping.recordingRules for KubeletPlegDurationHigh: tenant'*) ;; \
 			*) echo "$$output"; exit 1 ;; \
 		esac
+	@check_invalid_grouping() { \
+		label="$$1"; file="$$2"; expected="$$3"; \
+		output=$$($(JSONNET_BIN) -J vendor --ext-str groupingLabel="$$label" --ext-str podLabel=pod "$$file" 2>&1); status=$$?; \
+		if [ $$status -eq 0 ]; then \
+			echo "expected grouping label $$label rendered by $$file to fail"; \
+			exit 1; \
+		fi; \
+		case "$$output" in \
+			*"$$expected"*) ;; \
+			*) echo "$$output"; exit 1 ;; \
+		esac; \
+	}; \
+	check_invalid_grouping workload_type tests/invalid-recording-grouping.jsonnet 'additionalGrouping.recordingRules contains labels that cannot be preserved in application recording rules: workload_type'; \
+	check_invalid_grouping workload tests/invalid-recording-grouping.jsonnet 'additionalGrouping.recordingRules contains labels that cannot be preserved in application recording rules: workload'; \
+	check_invalid_grouping replicaset tests/invalid-recording-grouping.jsonnet 'additionalGrouping.recordingRules contains labels that cannot be preserved in application recording rules: replicaset'; \
+	check_invalid_grouping job_name tests/invalid-recording-grouping.jsonnet 'additionalGrouping.recordingRules contains labels that cannot be preserved in application recording rules: job_name'; \
+	check_invalid_grouping verb tests/invalid-recording-grouping.jsonnet 'additionalGrouping.recordingRules contains labels that cannot be preserved in kube-apiserver availability recording rules: verb'; \
+	check_invalid_grouping cpu tests/invalid-recording-grouping.jsonnet 'additionalGrouping.recordingRules contains labels that cannot be preserved in node recording rules: cpu'; \
+	check_invalid_grouping le tests/invalid-kubelet-recording-grouping.jsonnet 'additionalGrouping.recordingRules contains labels that cannot be preserved in kubelet recording rules: le'; \
+	check_invalid_grouping core tests/invalid-windows-recording-grouping.jsonnet 'additionalGrouping.recordingRules contains labels that cannot be preserved in Windows recording rules: core'; \
+	check_invalid_grouping container_id tests/invalid-windows-recording-grouping.jsonnet 'additionalGrouping.recordingRules contains labels that cannot be preserved in Windows recording rules: container_id'; \
+	check_invalid_grouping severity tests/invalid-alert-grouping.jsonnet 'additionalGrouping.alertingRules contains labels that cannot be preserved in application alerting rules: severity'; \
+	check_invalid_grouping phase tests/invalid-alert-grouping.jsonnet 'additionalGrouping.alertingRules contains labels that cannot be preserved in application alerting rules: phase'; \
+	check_invalid_grouping git_version tests/invalid-alert-grouping.jsonnet 'additionalGrouping.alertingRules contains labels that cannot be preserved in system alerting rules: git_version'; \
+	check_invalid_grouping le tests/invalid-alert-grouping.jsonnet 'additionalGrouping.alertingRules contains labels that cannot be preserved in kube-apiserver alerting rules: le'; \
+	check_invalid_grouping node tests/invalid-isolated-kubelet-alert-grouping.jsonnet 'additionalGrouping.alertingRules contains labels that cannot be preserved in kubelet alerting rules: node'; \
+	check_invalid_grouping pod tests/invalid-overcommit-alert-grouping.jsonnet 'additionalGrouping.alertingRules contains labels that cannot be preserved in multi-cluster CPU and memory overcommit alerts: pod'
 
 .PHONY: test
 test: $(PROMTOOL_BIN) config-test prometheus_alerts.yaml prometheus_rules.yaml $(ADDITIONAL_GROUPING_RULES) $(ADDITIONAL_GROUPING_ALERTS)
