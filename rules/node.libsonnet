@@ -30,7 +30,7 @@ local utils = import '../lib/utils.libsonnet';
         'node rules',
         'additionalGrouping.recordingRules'
       ),
-      ['__name__', 'cpu'],
+      ['__name__', 'cpu', 'endpoint', 'instance', 'job', 'service'],
       'node recording rules',
       'additionalGrouping.recordingRules'
     ),

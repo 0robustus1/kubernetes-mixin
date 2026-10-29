@@ -28,7 +28,7 @@ local utils = import '../lib/utils.libsonnet';
   prometheusAlerts+:: {
     local additionalGrouping = utils.rejectGroupingLabels(
       $._config.additionalGrouping.alertingRules,
-      ['__name__', 'alertname', 'condition', 'label_excluded_from_alerts', 'owner_kind', 'phase', 'reason', 'severity', 'status'],
+      ['__name__', 'alertname', 'condition', 'label_excluded_from_alerts', 'owner_kind', 'phase', 'reason', 'revision', 'severity', 'status'],
       'application alerting rules',
       'additionalGrouping.alertingRules'
     ),

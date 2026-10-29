@@ -200,7 +200,7 @@ config-test: $(JSONNET_BIN) $(JSONNET_VENDOR)
 			*'additionalGrouping.recordingRules contains labels removed by without() aggregations in node rules: mode'*) ;; \
 			*) echo "$$output"; exit 1 ;; \
 		esac
-	@output=$$($(JSONNET_BIN) -J vendor --ext-str groupingLabel=instance --ext-str podLabel=pod tests/invalid-recording-grouping.jsonnet 2>&1); status=$$?; \
+	@output=$$($(JSONNET_BIN) -J vendor --ext-str groupingLabel=instance --ext-str podLabel=pod tests/invalid-scheduler-recording-grouping.jsonnet 2>&1); status=$$?; \
 		if [ $$status -eq 0 ]; then \
 			echo 'expected invalid kube-scheduler recording rule grouping configuration to fail'; \
 			exit 1; \
@@ -209,7 +209,7 @@ config-test: $(JSONNET_BIN) $(JSONNET_VENDOR)
 			*'additionalGrouping.recordingRules contains labels removed by without() aggregations in kube-scheduler rules: instance'*) ;; \
 			*) echo "$$output"; exit 1 ;; \
 		esac
-	@output=$$($(JSONNET_BIN) -J vendor --ext-str groupingLabel=pod --ext-str podLabel=pod tests/invalid-recording-grouping.jsonnet 2>&1); status=$$?; \
+	@output=$$($(JSONNET_BIN) -J vendor --ext-str groupingLabel=pod --ext-str podLabel=pod tests/invalid-scheduler-recording-grouping.jsonnet 2>&1); status=$$?; \
 		if [ $$status -eq 0 ]; then \
 			echo 'expected invalid kube-scheduler recording rule grouping configuration to fail'; \
 			exit 1; \
@@ -218,7 +218,7 @@ config-test: $(JSONNET_BIN) $(JSONNET_VENDOR)
 			*'additionalGrouping.recordingRules contains labels removed by without() aggregations in kube-scheduler rules: pod'*) ;; \
 			*) echo "$$output"; exit 1 ;; \
 		esac
-	@output=$$($(JSONNET_BIN) -J vendor --ext-str groupingLabel=scheduler_pod --ext-str podLabel=scheduler_pod tests/invalid-recording-grouping.jsonnet 2>&1); status=$$?; \
+	@output=$$($(JSONNET_BIN) -J vendor --ext-str groupingLabel=scheduler_pod --ext-str podLabel=scheduler_pod tests/invalid-scheduler-recording-grouping.jsonnet 2>&1); status=$$?; \
 		if [ $$status -eq 0 ]; then \
 			echo 'expected custom pod label recording rule grouping configuration to fail'; \
 			exit 1; \
@@ -284,8 +284,15 @@ config-test: $(JSONNET_BIN) $(JSONNET_VENDOR)
 	check_invalid_grouping le tests/invalid-kubelet-recording-grouping.jsonnet 'additionalGrouping.recordingRules contains labels that cannot be preserved in kubelet recording rules: le'; \
 	check_invalid_grouping core tests/invalid-windows-recording-grouping.jsonnet 'additionalGrouping.recordingRules contains labels that cannot be preserved in Windows recording rules: core'; \
 	check_invalid_grouping container_id tests/invalid-windows-recording-grouping.jsonnet 'additionalGrouping.recordingRules contains labels that cannot be preserved in Windows recording rules: container_id'; \
+	for label in endpoint instance job service; do \
+		check_invalid_grouping "$$label" tests/invalid-apps-recording-grouping.jsonnet "additionalGrouping.recordingRules contains labels that cannot be preserved in application recording rules: $$label"; \
+		check_invalid_grouping "$$label" tests/invalid-node-recording-grouping.jsonnet "additionalGrouping.recordingRules contains labels that cannot be preserved in node recording rules: $$label"; \
+		check_invalid_grouping "$$label" tests/invalid-windows-recording-grouping.jsonnet "additionalGrouping.recordingRules contains labels that cannot be preserved in Windows recording rules: $$label"; \
+	done; \
 	check_invalid_grouping severity tests/invalid-alert-grouping.jsonnet 'additionalGrouping.alertingRules contains labels that cannot be preserved in application alerting rules: severity'; \
 	check_invalid_grouping phase tests/invalid-alert-grouping.jsonnet 'additionalGrouping.alertingRules contains labels that cannot be preserved in application alerting rules: phase'; \
+	check_invalid_grouping revision tests/invalid-alert-grouping.jsonnet 'additionalGrouping.alertingRules contains labels that cannot be preserved in application alerting rules: revision'; \
+	check_invalid_grouping access_mode tests/invalid-alert-grouping.jsonnet 'additionalGrouping.alertingRules contains labels that cannot be preserved in storage alerting rules: access_mode'; \
 	check_invalid_grouping git_version tests/invalid-alert-grouping.jsonnet 'additionalGrouping.alertingRules contains labels that cannot be preserved in system alerting rules: git_version'; \
 	check_invalid_grouping le tests/invalid-alert-grouping.jsonnet 'additionalGrouping.alertingRules contains labels that cannot be preserved in kube-apiserver alerting rules: le'; \
 	check_invalid_grouping node tests/invalid-isolated-kubelet-alert-grouping.jsonnet 'additionalGrouping.alertingRules contains labels that cannot be preserved in kubelet alerting rules: node'; \

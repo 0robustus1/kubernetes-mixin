@@ -24,7 +24,7 @@ local utils = import '../lib/utils.libsonnet';
   prometheusRules+:: {
     local additionalGrouping = utils.rejectGroupingLabels(
       $._config.additionalGrouping.recordingRules,
-      ['__name__', 'job_name', 'phase', 'replicaset', 'workload', 'workload_type'],
+      ['__name__', 'endpoint', 'instance', 'job', 'job_name', 'phase', 'replicaset', 'service', 'workload', 'workload_type'],
       'application recording rules',
       'additionalGrouping.recordingRules'
     ),

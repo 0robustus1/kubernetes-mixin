@@ -114,21 +114,6 @@ local groupedWindowsMemory = findRule(additionalGrouping.prometheusRules.groups,
 assert std.length(std.findSubstr('on (cluster, tenant, namespace) group_left()', groupedWindowsMemory.expr)) == 1;
 assert std.length(std.findSubstr('sum by (cluster, tenant, namespace) (node:windows_node_memory_bytes_total:sum)', groupedWindowsMemory.expr)) == 1;
 assert std.length(std.findSubstr('on (cluster, instance', groupedWindowsMemory.expr)) == 0;
-// Render the Windows rules in isolation because `instance` is invalid for the complete mixin:
-// kube-scheduler's `without(instance, pod)` aggregation cannot preserve it.
-local groupingWithInstance = ((import '../config.libsonnet') + (import '../rules/windows.libsonnet')) {
-  _config+:: {
-    additionalGrouping+: {
-      recordingRules: ['instance'],
-    },
-  },
-};
-local instanceGroupedWindowsMemory = findRule(groupingWithInstance.prometheusRules.groups, 'node:windows_node_memory_utilisation:ratio');
-assert std.length(std.findSubstr('on (cluster) group_left()', instanceGroupedWindowsMemory.expr)) == 1;
-assert std.length(std.findSubstr('sum by (cluster) (node:windows_node_memory_bytes_total:sum)', instanceGroupedWindowsMemory.expr)) == 1;
-local instanceGroupedWindowsTotal = findRule(groupingWithInstance.prometheusRules.groups, 'node:windows_node_memory_bytes_total:sum');
-assert std.length(std.findSubstr('sum by (cluster, instance)', instanceGroupedWindowsTotal.expr)) == 1;
-
 // Labels supplied through group_left remain payload labels instead of becoming match keys.
 // Render the applicable recording rules without kube-scheduler, whose `without(instance, pod)`
 // aggregation intentionally rejects this conflict-focused configuration.
@@ -267,26 +252,25 @@ assert std.length(std.findSubstr('on (pod,namespace,cluster) group_left(label_te
 local conflictingAlertGrouping = mixin {
   _config+:: {
     additionalGrouping+: {
-      recordingRules: ['revision', 'eviction_signal', 'operation_type', 'access_mode', 'label_team', 'tenant'],
-      alertingRules: ['revision', 'eviction_signal', 'operation_type', 'access_mode', 'label_team', 'tenant'],
+      recordingRules: ['eviction_signal', 'operation_type', 'label_team', 'tenant'],
+      alertingRules: ['eviction_signal', 'operation_type', 'label_team', 'tenant'],
     },
     common_join_labels: ['label_team'],
   },
 };
 local conflictingAlertGroups = conflictingAlertGrouping.prometheusAlerts.groups;
 local conflictingPodAlert = findAlert(conflictingAlertGroups, 'KubePodNotReady');
-assert std.length(std.findSubstr('on(namespace, pod, cluster, revision, eviction_signal, operation_type, access_mode, label_team, tenant)', conflictingPodAlert.expr)) == 3;
-assert std.length(std.findSubstr('on (pod, namespace, cluster, revision, eviction_signal, operation_type, access_mode, tenant) group_left(label_team)', conflictingPodAlert.expr)) == 1;
+assert std.length(std.findSubstr('on(namespace, pod, cluster, eviction_signal, operation_type, label_team, tenant)', conflictingPodAlert.expr)) == 3;
+assert std.length(std.findSubstr('on (pod, namespace, cluster, eviction_signal, operation_type, tenant) group_left(label_team)', conflictingPodAlert.expr)) == 1;
 local conflictingHPA = findAlert(conflictingAlertGroups, 'KubeHpaMaxedOut');
-assert std.length(std.findSubstr('on(namespace, horizontalpodautoscaler, cluster, revision, eviction_signal, operation_type, access_mode, label_team, tenant)', conflictingHPA.expr)) == 2;
+assert std.length(std.findSubstr('on(namespace, horizontalpodautoscaler, cluster, eviction_signal, operation_type, label_team, tenant)', conflictingHPA.expr)) == 2;
 local conflictingKubeletLatency = findAlert(conflictingAlertGroups, 'KubeletPodStartUpLatencyHigh');
-assert std.length(std.findSubstr('on(cluster, instance, revision, access_mode, label_team, tenant) group_left(node)', conflictingKubeletLatency.expr)) == 1;
+assert std.length(std.findSubstr('on(cluster, instance, label_team, tenant) group_left(node)', conflictingKubeletLatency.expr)) == 1;
 local conflictingVersion = findAlert(conflictingAlertGroups, 'KubeVersionMismatch');
-assert std.length(std.findSubstr('count by (cluster, revision, eviction_signal, operation_type, access_mode, label_team, tenant)', conflictingVersion.expr)) == 1;
+assert std.length(std.findSubstr('count by (cluster, eviction_signal, operation_type, label_team, tenant)', conflictingVersion.expr)) == 1;
 local conflictingClient = findAlert(conflictingAlertGroups, 'KubeClientErrors');
-assert std.length(std.findSubstr('by (cluster, instance, job, namespace, revision, eviction_signal, operation_type, access_mode, label_team, tenant)', conflictingClient.expr)) == 2;
+assert std.length(std.findSubstr('by (cluster, instance, job, namespace, eviction_signal, operation_type, label_team, tenant)', conflictingClient.expr)) == 2;
 local conflictingVolume = findAlerts(conflictingAlertGroups, 'KubePersistentVolumeFillingUp')[0];
-assert std.length(std.findSubstr('unless on(cluster, namespace, persistentvolumeclaim, revision, eviction_signal, operation_type, label_team, tenant)', conflictingVolume.expr)) == 1;
-assert std.length(std.findSubstr('unless on(cluster, namespace, persistentvolumeclaim, revision, eviction_signal, operation_type, access_mode, label_team, tenant)', conflictingVolume.expr)) == 1;
+assert std.length(std.findSubstr('unless on(cluster, namespace, persistentvolumeclaim, eviction_signal, operation_type, label_team, tenant)', conflictingVolume.expr)) == 2;
 
 true
