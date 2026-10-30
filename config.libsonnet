@@ -177,9 +177,6 @@
       // Recording-backed alerts also require the label in `recordingRules`.
       // Resource overcommit alerts apply these groups only when `showMultiCluster` is enabled.
       alertingRules: [],
-
-      // Additional groups for `by` expressions in dashboards
-      dashboards: [],
     },
   },
 }
