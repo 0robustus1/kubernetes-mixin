@@ -181,5 +181,19 @@
       // Resource overcommit alerts apply these groups only when `showMultiCluster` is enabled.
       alertingRules: [],
     },
+
+    // Additional selectors for the raw metrics queried by rules. Each entry has three fields,
+    // for example { label: 'tenant', matcher: '=~', value: 'team-.*' }. The matcher is one of
+    // `=`, `!=`, `=~` and `!~`.
+    additionalSelectors: {
+      // Matchers added to the selectors of raw metrics in recordingRules. References to other
+      // recording rules do not receive them, because those series are derived from the filtered
+      // raw metrics.
+      recordingRules: [],
+
+      // Matchers added to the selectors of raw metrics in alertingRules. Alerts that read
+      // recording rules require the same selectors in `recordingRules`.
+      alertingRules: [],
+    },
   },
 }

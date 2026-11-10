@@ -36,16 +36,17 @@ local failOnConflicts(labels, conflicts, message) =
   then error '%s: %s' % [message, std.join(', ', unique(conflicts))]
   else labels;
 
-local validateGroupingLabels(labels, groupingConfig) =
+local validLabelName(label) =
   local isLetter(char) =
     (char >= 'a' && char <= 'z') ||
     (char >= 'A' && char <= 'Z');
   local isDigit(char) = char >= '0' && char <= '9';
-  local validLabelName(label) =
-    local chars = std.stringChars(label);
-    std.length(chars) > 0 &&
-    (isLetter(chars[0]) || chars[0] == '_') &&
-    std.all([isLetter(char) || isDigit(char) || char == '_' for char in chars]);
+  local chars = std.stringChars(label);
+  std.length(chars) > 0 &&
+  (isLetter(chars[0]) || chars[0] == '_') &&
+  std.all([isLetter(char) || isDigit(char) || char == '_' for char in chars]);
+
+local validateGroupingLabels(labels, groupingConfig) =
   [
     if std.type(label) != 'string'
     then error '%s must contain only Prometheus label name strings, got %s' % [groupingConfig, std.type(label)]
@@ -54,6 +55,44 @@ local validateGroupingLabels(labels, groupingConfig) =
     else label
     for label in labels
   ];
+
+// The configured selectors of one kind, which are empty when the configuration does not define
+// them, for example after overriding additionalSelectors without `+`.
+local configuredSelectors(config, kind) = std.get(std.get(config, 'additionalSelectors', {}), kind, []);
+
+local selectorMatchers = ['=', '!=', '=~', '!~'];
+
+// The configuration fields that hold the selector of one exporter or component.
+local exporterSelectorKeys = [
+  'cadvisorSelector',
+  'kubeletSelector',
+  'kubeStateMetricsSelector',
+  'nodeExporterSelector',
+  'kubeSchedulerSelector',
+  'kubeControllerManagerSelector',
+  'kubeApiserverSelector',
+  'kubeProxySelector',
+  'windowsExporterSelector',
+];
+
+local validateSelectors(selectors, selectorConfig) =
+  [
+    if std.type(selector) != 'object' || std.objectFields(selector) != ['label', 'matcher', 'value']
+    then error '%s must contain only objects with the fields label, matcher and value, got %s' % [selectorConfig, std.manifestJsonMinified(selector)]
+    else if std.type(selector.label) != 'string' || !validLabelName(selector.label)
+    then error '%s contains an invalid Prometheus label name: %s' % [selectorConfig, std.manifestJsonMinified(selector.label)]
+    else if selector.label == '__name__'
+    then error '%s must not select on __name__' % selectorConfig
+    else if !std.member(selectorMatchers, selector.matcher)
+    then error '%s contains an unsupported matcher for label %s, expected one of =, !=, =~ or !~: %s' % [selectorConfig, selector.label, std.manifestJsonMinified(selector.matcher)]
+    else if std.type(selector.value) != 'string'
+    then error '%s must contain string values, got %s for label %s' % [selectorConfig, std.type(selector.value), selector.label]
+    else selector
+    for selector in selectors
+  ];
+
+local renderSelector(selector) =
+  '%s%s%s' % [selector.label, selector.matcher, std.escapeStringJson(selector.value)];
 
 local rejectGroupingLabels(labels, rejectedLabels, context, groupingConfig) =
   failOnConflicts(
@@ -120,6 +159,46 @@ local requireAlertGroupingInRecordingRules(labels, recordingLabels, context) =
           withoutLabels(labels, excluded),
           configuredGroupingLabels(config, 'recordingRules'),
           alertContext
+        ),
+    },
+
+  // Validates the configured additional selectors of one kind ('recordingRules' or
+  // 'alertingRules'). Returns the validated entries, the rendered matchers as one string,
+  // apply(), which adds the matchers to the exporter selectors of a configuration and provides
+  // prefixedAdditionalSelector and additionalSelectorBraces for metrics that have no exporter
+  // selector, and requireRecorded() for alerts that read recording rules.
+  selectors(config, kind)::
+    local name = 'additionalSelectors.' + kind;
+    local entries = validateSelectors(configuredSelectors(config, kind), name);
+    local rendered = [renderSelector(selector) for selector in entries];
+    local matchers = std.join(',', rendered);
+    local extend(base) =
+      if matchers == '' then base
+      else if base == '' then matchers
+      else base + ',' + matchers;
+    {
+      entries: entries,
+      matchers: matchers,
+      apply(c)::
+        c {
+          prefixedAdditionalSelector: if matchers == '' then '' else matchers + ',',
+          additionalSelectorBraces: if matchers == '' then '' else '{' + matchers + '}',
+        } + {
+          [key]: extend(c[key])
+          for key in exporterSelectorKeys
+          if std.objectHasAll(c, key)
+        },
+      // Alerts that read recording rules cannot filter the raw metrics behind them, so the
+      // selectors have to be applied by the recording rules as well.
+      requireRecorded(alertContext)::
+        local recorded = [
+          renderSelector(selector)
+          for selector in validateSelectors(configuredSelectors(config, 'recordingRules'), 'additionalSelectors.recordingRules')
+        ];
+        failOnConflicts(
+          rendered,
+          [selector for selector in rendered if !std.member(recorded, selector)],
+          'additionalSelectors.alertingRules selectors used by recording-backed alerts must also be configured in additionalSelectors.recordingRules for %s' % alertContext
         ),
     },
 
