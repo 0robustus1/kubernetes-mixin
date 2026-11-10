@@ -43,7 +43,8 @@ local utils = import '../lib/utils.libsonnet';
       'storage alerting rules',
       ['access_mode']
     ),
-    local config = $._config {
+    local selectors = utils.selectors($._config, 'alertingRules'),
+    local config = selectors.apply($._config) {
       matchingPersistentVolumeClaimAccessMode: grouping.by([$._config.clusterLabel, 'namespace', 'persistentvolumeclaim']),
       matchingPersistentVolumeClaimLabels: grouping.by([$._config.clusterLabel, 'namespace', 'persistentvolumeclaim'], ['label_excluded_from_alerts']),
     },
@@ -63,9 +64,9 @@ local utils = import '../lib/utils.libsonnet';
               and
               kubelet_volume_stats_used_bytes{%(prefixedNamespaceSelector)s%(kubeletSelector)s} > 0
               unless on(%(matchingPersistentVolumeClaimAccessMode)s)
-              kube_persistentvolumeclaim_access_mode{%(prefixedNamespaceSelector)s access_mode="ReadOnlyMany"} == 1
+              kube_persistentvolumeclaim_access_mode{%(prefixedNamespaceSelector)s%(prefixedAdditionalSelector)s access_mode="ReadOnlyMany"} == 1
               unless on(%(matchingPersistentVolumeClaimLabels)s)
-              kube_persistentvolumeclaim_labels{%(prefixedNamespaceSelector)s%(pvExcludedSelector)s} == 1
+              kube_persistentvolumeclaim_labels{%(prefixedNamespaceSelector)s%(prefixedAdditionalSelector)s%(pvExcludedSelector)s} == 1
             ||| % config,
             'for': '1m',
             labels: {
@@ -89,9 +90,9 @@ local utils = import '../lib/utils.libsonnet';
               and
               predict_linear(kubelet_volume_stats_available_bytes{%(prefixedNamespaceSelector)s%(kubeletSelector)s}[%(volumeFullPredictionSampleTime)s], 4 * 24 * 3600) < 0
               unless on(%(matchingPersistentVolumeClaimAccessMode)s)
-              kube_persistentvolumeclaim_access_mode{%(prefixedNamespaceSelector)s access_mode="ReadOnlyMany"} == 1
+              kube_persistentvolumeclaim_access_mode{%(prefixedNamespaceSelector)s%(prefixedAdditionalSelector)s access_mode="ReadOnlyMany"} == 1
               unless on(%(matchingPersistentVolumeClaimLabels)s)
-              kube_persistentvolumeclaim_labels{%(prefixedNamespaceSelector)s%(pvExcludedSelector)s} == 1
+              kube_persistentvolumeclaim_labels{%(prefixedNamespaceSelector)s%(prefixedAdditionalSelector)s%(pvExcludedSelector)s} == 1
             ||| % config,
             'for': '1h',
             labels: {
@@ -113,9 +114,9 @@ local utils = import '../lib/utils.libsonnet';
               and
               kubelet_volume_stats_inodes_used{%(prefixedNamespaceSelector)s%(kubeletSelector)s} > 0
               unless on(%(matchingPersistentVolumeClaimAccessMode)s)
-              kube_persistentvolumeclaim_access_mode{%(prefixedNamespaceSelector)s access_mode="ReadOnlyMany"} == 1
+              kube_persistentvolumeclaim_access_mode{%(prefixedNamespaceSelector)s%(prefixedAdditionalSelector)s access_mode="ReadOnlyMany"} == 1
               unless on(%(matchingPersistentVolumeClaimLabels)s)
-              kube_persistentvolumeclaim_labels{%(prefixedNamespaceSelector)s%(pvExcludedSelector)s} == 1
+              kube_persistentvolumeclaim_labels{%(prefixedNamespaceSelector)s%(prefixedAdditionalSelector)s%(pvExcludedSelector)s} == 1
             ||| % config,
             'for': '1m',
             labels: {
@@ -139,9 +140,9 @@ local utils = import '../lib/utils.libsonnet';
               and
               predict_linear(kubelet_volume_stats_inodes_free{%(prefixedNamespaceSelector)s%(kubeletSelector)s}[%(volumeFullPredictionSampleTime)s], 4 * 24 * 3600) < 0
               unless on(%(matchingPersistentVolumeClaimAccessMode)s)
-              kube_persistentvolumeclaim_access_mode{%(prefixedNamespaceSelector)s access_mode="ReadOnlyMany"} == 1
+              kube_persistentvolumeclaim_access_mode{%(prefixedNamespaceSelector)s%(prefixedAdditionalSelector)s access_mode="ReadOnlyMany"} == 1
               unless on(%(matchingPersistentVolumeClaimLabels)s)
-              kube_persistentvolumeclaim_labels{%(prefixedNamespaceSelector)s%(pvExcludedSelector)s} == 1
+              kube_persistentvolumeclaim_labels{%(prefixedNamespaceSelector)s%(prefixedAdditionalSelector)s%(pvExcludedSelector)s} == 1
             ||| % config,
             'for': '1h',
             labels: {
@@ -156,7 +157,7 @@ local utils = import '../lib/utils.libsonnet';
             alert: 'KubePersistentVolumeErrors',
             expr: |||
               kube_persistentvolume_status_phase{phase=~"Failed|Pending",%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s} > 0
-            ||| % $._config,
+            ||| % config,
             'for': '5m',
             labels: {
               severity: 'critical',

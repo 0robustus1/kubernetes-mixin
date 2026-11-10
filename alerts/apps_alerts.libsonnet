@@ -32,7 +32,8 @@ local utils = import '../lib/utils.libsonnet';
       'application alerting rules',
       ['condition', 'label_excluded_from_alerts', 'owner_kind', 'phase', 'reason', 'revision', 'status']
     ),
-    local config = $._config {
+    local selectors = utils.selectors($._config, 'alertingRules'),
+    local config = selectors.apply($._config) {
       groupingNamespacePodJobCluster: grouping.by(['namespace', 'pod', 'job', $._config.clusterLabel]),
       groupingNamespacePodOwnerKindCluster: grouping.by(['namespace', 'pod', 'owner_kind', $._config.clusterLabel], ['job']),
       matchingNamespacePodCluster: grouping.by(['namespace', 'pod', $._config.clusterLabel], ['job']),
@@ -44,12 +45,12 @@ local utils = import '../lib/utils.libsonnet';
     groups+: [
       {
         name: 'kubernetes-apps',
-        rules: [utils.wrap_rule_for_labels(rule, $._config, grouping.labels) for rule in self.rules_],
+        rules: [utils.wrap_rule_for_labels(rule, config, grouping.labels) for rule in self.rules_],
         rules_:: [
           {
             expr: |||
               max_over_time(kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff", %(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}[5m]) >= 1
-            ||| % $._config,
+            ||| % config,
             labels: {
               severity: 'warning',
             },
@@ -78,7 +79,7 @@ local utils = import '../lib/utils.libsonnet';
                     kube_pod_status_ready{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s, condition="true"} == 0
                   )
                 ) * on(%(matchingNamespacePodCluster)s) group_left() topk by(%(matchingNamespacePodCluster)s) (
-                  1, max by(%(groupingNamespacePodOwnerKindCluster)s) (kube_pod_owner{owner_kind!="Job"})
+                  1, max by(%(groupingNamespacePodOwnerKindCluster)s) (kube_pod_owner{%(prefixedAdditionalSelector)sowner_kind!="Job"})
                 )
               ) > 0
               unless on(%(matchingNamespacePodCluster)s)
@@ -101,7 +102,7 @@ local utils = import '../lib/utils.libsonnet';
               kube_deployment_status_observed_generation{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
                 !=
               kube_deployment_metadata_generation{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
-            ||| % $._config,
+            ||| % config,
             labels: {
               severity: 'warning',
             },
@@ -125,7 +126,7 @@ local utils = import '../lib/utils.libsonnet';
                   ==
                 0
               )
-            ||| % $._config,
+            ||| % config,
             labels: {
               severity: 'warning',
             },
@@ -142,7 +143,7 @@ local utils = import '../lib/utils.libsonnet';
             expr: |||
               kube_deployment_status_condition{condition="Progressing", status="false",%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
               != 0
-            ||| % $._config,
+            ||| % config,
             labels: {
               severity: 'warning',
             },
@@ -166,7 +167,7 @@ local utils = import '../lib/utils.libsonnet';
                   ==
                 0
               )
-            ||| % $._config,
+            ||| % config,
             labels: {
               severity: 'warning',
             },
@@ -184,7 +185,7 @@ local utils = import '../lib/utils.libsonnet';
               kube_statefulset_status_observed_generation{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
                 !=
               kube_statefulset_metadata_generation{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
-            ||| % $._config,
+            ||| % config,
             labels: {
               severity: 'warning',
             },
@@ -255,7 +256,7 @@ local utils = import '../lib/utils.libsonnet';
                   ==
                 0
               )
-            ||| % $._config,
+            ||| % config,
             labels: {
               severity: 'warning',
             },
@@ -271,7 +272,7 @@ local utils = import '../lib/utils.libsonnet';
           {
             expr: |||
               kube_pod_container_status_waiting_reason{reason!="CrashLoopBackOff", %(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s} > 0
-            ||| % $._config,
+            ||| % config,
             labels: {
               severity: 'warning',
             },
@@ -290,7 +291,7 @@ local utils = import '../lib/utils.libsonnet';
               kube_daemonset_status_desired_number_scheduled{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
                 -
               kube_daemonset_status_current_number_scheduled{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s} > 0
-            ||| % $._config,
+            ||| % config,
             labels: {
               severity: 'warning',
             },
@@ -306,7 +307,7 @@ local utils = import '../lib/utils.libsonnet';
             alert: 'KubeDaemonSetMisScheduled',
             expr: |||
               kube_daemonset_status_number_misscheduled{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s} > 0
-            ||| % $._config,
+            ||| % config,
             labels: {
               severity: 'warning',
             },
@@ -342,7 +343,7 @@ local utils = import '../lib/utils.libsonnet';
             alert: 'KubeJobFailed',
             expr: |||
               kube_job_failed{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}  > 0
-            ||| % $._config,
+            ||| % config,
             'for': '15m',
             labels: {
               severity: 'warning',
@@ -369,7 +370,7 @@ local utils = import '../lib/utils.libsonnet';
               kube_horizontalpodautoscaler_spec_max_replicas{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s})
                 and
               changes(kube_horizontalpodautoscaler_status_current_replicas{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}[15m]) == 0
-            ||| % $._config,
+            ||| % config,
             labels: {
               severity: 'warning',
             },
@@ -423,7 +424,7 @@ local utils = import '../lib/utils.libsonnet';
               and
               kube_poddisruptionbudget_status_expected_pods{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
               > 0
-            ||| % $._config,
+            ||| % config,
             labels: {
               severity: 'warning',
             },

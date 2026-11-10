@@ -34,7 +34,9 @@ local utils = import '../lib/utils.libsonnet';
     // The burn-rate alert reads recording rules, so its labels must be recorded too. The check
     // also applies when no SLO windows are configured.
     assert std.isArray(grouping.requireRecorded([$._config.clusterLabel, 'verb'], 'KubeAPIErrorBudgetBurn')),
-    local config = $._config {
+    assert std.isArray(selectors.requireRecorded('KubeAPIErrorBudgetBurn')),
+    local selectors = utils.selectors($._config, 'alertingRules'),
+    local config = selectors.apply($._config) {
       groupingCluster: grouping.by([$._config.clusterLabel]),
       matchingCertificate: grouping.by(['job', $._config.clusterLabel, 'instance']),
       groupingAggregatedAPIErrors: grouping.by([$._config.clusterLabel, 'instance', 'name', 'reason']),
@@ -153,11 +155,11 @@ local utils = import '../lib/utils.libsonnet';
           },
           (import '../lib/absent_alert.libsonnet') {
             componentName:: 'KubeAPI',
-            selector:: $._config.kubeApiserverSelector,
+            selector:: config.kubeApiserverSelector,
           },
           (import '../lib/instance_unreachable_alert.libsonnet') {
             componentName:: 'KubeAPI',
-            selector:: $._config.kubeApiserverSelector,
+            selector:: config.kubeApiserverSelector,
           },
           {
             alert: 'KubeAPITerminatedRequests',

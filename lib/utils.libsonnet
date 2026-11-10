@@ -231,7 +231,7 @@ local requireAlertGroupingInRecordingRules(labels, recordingLabels, context) =
       join_labels: config['%ss_join_labels' % kind],
       // since the label 'job' is reserved, the resource with kind Job uses the label 'job_name' instead
       on_labels: ['%s' % (if kind == 'job' then 'job_name' else kind), '%s' % config.namespaceLabel, '%s' % config.clusterLabel],
-      metric: 'kube_%s_labels' % kind,
+      metric: 'kube_%s_labels%s' % [kind, std.get(config, 'additionalSelectorBraces', '')],
     };
     local additionalMatchingLabels = withoutLabels(
       if additionalLabels == null then configuredGroupingLabels(config, 'alertingRules') else additionalLabels,

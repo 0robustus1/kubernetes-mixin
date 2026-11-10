@@ -13,23 +13,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+local utils = import '../lib/utils.libsonnet';
+
 {
   _config+:: {
     kubeProxySelector: error 'must provide selector for kube-proxy',
   },
 
   prometheusAlerts+:: {
+    local selectors = utils.selectors($._config, 'alertingRules'),
+    local config = selectors.apply($._config),
+
     groups+: [
       {
         name: 'kubernetes-system-kube-proxy',
         rules: [
           (import '../lib/absent_alert.libsonnet') {
             componentName:: 'KubeProxy',
-            selector:: $._config.kubeProxySelector,
+            selector:: config.kubeProxySelector,
           },
           (import '../lib/instance_unreachable_alert.libsonnet') {
             componentName:: 'KubeProxy',
-            selector:: $._config.kubeProxySelector,
+            selector:: config.kubeProxySelector,
           },
         ],
       },

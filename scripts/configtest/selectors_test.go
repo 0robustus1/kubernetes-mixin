@@ -217,3 +217,46 @@ utils.selectors(config, 'recordingRules').matchers
 		t.Fatalf("expected no matchers, got %s", got)
 	}
 }
+
+// TestSelectorsRecordingBackedAlerts checks the alerts that read recording rules: their selectors
+// have to be configured for the recording rules as well, in every mode.
+func TestSelectorsRecordingBackedAlerts(t *testing.T) {
+	const tenant = `{ label: 'tenant', matcher: '=', value: 'a' }`
+	for _, tc := range []struct {
+		name   string
+		module string
+		config string
+		alert  string
+	}{
+		{"apiserverBurnRate", "alerts/kube_apiserver.libsonnet", "", "KubeAPIErrorBudgetBurn"},
+		{"apiserverBurnRateWithoutWindows", "alerts/kube_apiserver.libsonnet", noAPIWindows, "KubeAPIErrorBudgetBurn"},
+		{"kubeletPleg", "alerts/kubelet.libsonnet", "", "KubeletPlegDurationHigh"},
+		{"overcommit", "alerts/resource_alerts.libsonnet", "", "KubeCPUOvercommit and KubeMemoryOvercommit"},
+		{"overcommitMultiCluster", "alerts/resource_alerts.libsonnet", "showMultiCluster: true,", "KubeCPUOvercommit and KubeMemoryOvercommit"},
+	} {
+		render := func(recording string) (string, error) {
+			return evaluate(t, fmt.Sprintf(`local mixin = (import 'config.libsonnet') + (import '%s');
+(mixin {
+  _config+:: {
+    %s
+    %s
+    additionalSelectors+: { recordingRules: [%s], alertingRules: [%s] },
+  },
+}).prometheusAlerts
+`, tc.module, alertSelectors, tc.config, recording, tenant))
+		}
+		t.Run(tc.name+"/missing", func(t *testing.T) {
+			t.Parallel()
+			want := "additionalSelectors.alertingRules selectors used by recording-backed alerts must also be configured in additionalSelectors.recordingRules for " + tc.alert + ": tenant=\"a\""
+			if _, err := render(""); err == nil || !strings.Contains(err.Error(), want) {
+				t.Fatalf("expected an error containing %q, got %v", want, err)
+			}
+		})
+		t.Run(tc.name+"/recorded", func(t *testing.T) {
+			t.Parallel()
+			if _, err := render(tenant); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}

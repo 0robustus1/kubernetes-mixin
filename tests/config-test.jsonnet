@@ -326,4 +326,31 @@ assert findRule(mixin.prometheusRules.groups, 'node:node_num_cpu:sum').expr ==
 // Overriding additionalSelectors without `+` leaves the lists it does not define empty.
 assert std.length((mixin { _config+:: { additionalSelectors: {} } }).prometheusRules.groups) > 0;
 
+// Alerting selectors extend the exporter selectors of the alerts, raw metrics without one, the
+// label-enrichment join and the absent() alerts. Recording rules and their references stay unchanged.
+local selectorTenant = { label: 'tenant', matcher: '=', value: 'a' };
+local selectorAlertsMixin = mixin {
+  _config+:: {
+    common_join_labels: ['label_team'],
+    additionalSelectors+: {
+      recordingRules: [selectorTenant],
+      alertingRules: [selectorTenant],
+    },
+  },
+};
+local selectorAlerts = selectorAlertsMixin.prometheusAlerts.groups;
+local selectedPodNotReady = findAlert(selectorAlerts, 'KubePodNotReady');
+assert std.length(std.findSubstr('kube_pod_status_phase{job="kube-state-metrics",tenant="a"', selectedPodNotReady.expr)) == 2;
+assert std.length(std.findSubstr('kube_pod_owner{tenant="a",owner_kind!="Job"}', selectedPodNotReady.expr)) == 1;
+assert std.length(std.findSubstr('group_left(label_team) kube_pod_labels{tenant="a"}', selectedPodNotReady.expr)) == 1;
+assert std.length(std.findSubstr('absent(up{job="kube-apiserver",tenant="a"})', findAlert(selectorAlerts, 'KubeAPIDown').expr)) == 1;
+assert std.length(std.findSubstr('kubelet_server_expiration_renew_errors{tenant="a"}[5m]', findAlert(selectorAlerts, 'KubeletServerCertificateRenewalErrors').expr)) == 1;
+assert std.length(std.findSubstr('node_quantile:kubelet_pleg_relist_duration_seconds:histogram_quantile{quantile="0.99"}', findAlert(selectorAlerts, 'KubeletPlegDurationHigh').expr)) == 1;
+assert utils.wrap_rule_for_labels(
+  { alert: 'KubePodCrashLooping', expr: 'up' },
+  { pods_join_labels: ['label_team'], namespaceLabel: 'namespace', clusterLabel: 'cluster', additionalSelectorBraces: '{tenant="a"}' }
+).expr == '(up) * on (pod,namespace,cluster) group_left(label_team) kube_pod_labels{tenant="a"}';
+// Overriding additionalSelectors without `+` leaves the lists it does not define empty.
+assert std.length((mixin { _config+:: { additionalSelectors: {} } }).prometheusAlerts.groups) > 0;
+
 true

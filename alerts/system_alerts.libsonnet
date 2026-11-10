@@ -28,7 +28,8 @@ local utils = import '../lib/utils.libsonnet';
       'system alerting rules',
       ['code', 'git_version']
     ),
-    local config = $._config {
+    local selectors = utils.selectors($._config, 'alertingRules'),
+    local config = selectors.apply($._config) {
       groupingVersion: grouping.by(['git_version', $._config.clusterLabel]),
       groupingCluster: grouping.by([$._config.clusterLabel]),
       groupingClient: grouping.by([$._config.clusterLabel, 'instance', 'job', 'namespace']),
@@ -41,7 +42,7 @@ local utils = import '../lib/utils.libsonnet';
           {
             alert: 'KubeVersionMismatch',
             expr: |||
-              count by (%(groupingCluster)s) (count by (%(groupingVersion)s) (label_replace(kubernetes_build_info{%(notKubeDnsCoreDnsSelector)s},"git_version","$1","git_version","(v[0-9]*.[0-9]*).*"))) > 1
+              count by (%(groupingCluster)s) (count by (%(groupingVersion)s) (label_replace(kubernetes_build_info{%(prefixedAdditionalSelector)s%(notKubeDnsCoreDnsSelector)s},"git_version","$1","git_version","(v[0-9]*.[0-9]*).*"))) > 1
             ||| % config,
             'for': '15m',
             labels: {

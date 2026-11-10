@@ -52,7 +52,8 @@ local utils = import '../lib/utils.libsonnet';
     ],
     ['resource', 'instance', 'job', 'type', 'id', 'metrics_path', 'name', 'image', 'endpoint', 'node']
   ),
-  local config = $._config {
+  local selectors = utils.selectors($._config, 'alertingRules'),
+  local config = selectors.apply($._config) {
     groupingClusterOvercommit: grouping.by([$._config.clusterLabel]),
     groupingClusterNodeOvercommit: grouping.by([$._config.clusterLabel, 'node']),
     groupingQuotaIdentity: grouping.by([$._config.clusterLabel, $._config.namespaceLabel, 'resource', 'resourcequota']),
@@ -158,10 +159,11 @@ local utils = import '../lib/utils.libsonnet';
   },
 
   prometheusAlerts+:: {
-    // The CPU and memory overcommit alerts read recording rules, so their labels must be
-    // recorded too. The grouping keys do not check this, so the assert is the only check in
-    // both modes.
+    // The CPU and memory overcommit alerts read recording rules, so their labels and selectors
+    // must be recorded too. The grouping keys do not check this, so the asserts are the only
+    // checks in both modes.
     assert std.isArray(grouping.requireRecorded([$._config.clusterLabel], 'KubeCPUOvercommit and KubeMemoryOvercommit')),
+    assert std.isArray(selectors.requireRecorded('KubeCPUOvercommit and KubeMemoryOvercommit')),
 
     groups+: [
       {

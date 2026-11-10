@@ -39,7 +39,8 @@ local utils = import '../lib/utils.libsonnet';
       'kubelet alerting rules',
       ['condition', 'instance', 'job', 'le', 'node', 'resource', 'status', 'unit']
     ),
-    local config = $._config {
+    local selectors = utils.selectors($._config, 'alertingRules'),
+    local config = selectors.apply($._config) {
       groupingClusterNode: grouping.by([$._config.clusterLabel, 'node']),
       groupingClusterInstance: grouping.by([$._config.clusterLabel, 'instance']),
       matchingClusterInstance: grouping.by([$._config.clusterLabel, 'instance'], ['eviction_signal', 'operation_type']),
@@ -93,7 +94,7 @@ local utils = import '../lib/utils.libsonnet';
           {
             expr: |||
               (kube_node_spec_taint{%(kubeStateMetricsSelector)s,key="node.kubernetes.io/unreachable",effect="NoSchedule"} unless ignoring(key,value) kube_node_spec_taint{%(kubeStateMetricsSelector)s,key=~"%(kubeNodeUnreachableIgnoreKeys)s"}) == 1
-            ||| % $._config {
+            ||| % config {
               kubeNodeUnreachableIgnoreKeys: std.join('|', super.kubeNodeUnreachableIgnoreKeys),
             },
             labels: {
@@ -184,9 +185,10 @@ local utils = import '../lib/utils.libsonnet';
                 [$._config.clusterLabel, 'instance', 'node', 'quantile', 'le'],
                 'KubeletPlegDurationHigh'
               ));
+              assert std.isArray(selectors.requireRecorded('KubeletPlegDurationHigh'));
               |||
                 node_quantile:kubelet_pleg_relist_duration_seconds:histogram_quantile{quantile="0.99"} >= 10
-              ||| % $._config,
+              ||| % config,
             'for': '5m',
             labels: {
               severity: 'warning',
@@ -228,8 +230,8 @@ local utils = import '../lib/utils.libsonnet';
           {
             alert: 'KubeletClientCertificateExpiration',
             expr: |||
-              kubelet_certificate_manager_client_ttl_seconds < %(kubeletCertExpirationWarningSeconds)s
-            ||| % $._config,
+              kubelet_certificate_manager_client_ttl_seconds%(additionalSelectorBraces)s < %(kubeletCertExpirationWarningSeconds)s
+            ||| % config,
             labels: {
               severity: 'warning',
             },
@@ -243,8 +245,8 @@ local utils = import '../lib/utils.libsonnet';
           {
             alert: 'KubeletClientCertificateExpiration',
             expr: |||
-              kubelet_certificate_manager_client_ttl_seconds < %(kubeletCertExpirationCriticalSeconds)s
-            ||| % $._config,
+              kubelet_certificate_manager_client_ttl_seconds%(additionalSelectorBraces)s < %(kubeletCertExpirationCriticalSeconds)s
+            ||| % config,
             labels: {
               severity: 'critical',
             },
@@ -258,8 +260,8 @@ local utils = import '../lib/utils.libsonnet';
           {
             alert: 'KubeletServerCertificateExpiration',
             expr: |||
-              kubelet_certificate_manager_server_ttl_seconds < %(kubeletCertExpirationWarningSeconds)s
-            ||| % $._config,
+              kubelet_certificate_manager_server_ttl_seconds%(additionalSelectorBraces)s < %(kubeletCertExpirationWarningSeconds)s
+            ||| % config,
             labels: {
               severity: 'warning',
             },
@@ -273,8 +275,8 @@ local utils = import '../lib/utils.libsonnet';
           {
             alert: 'KubeletServerCertificateExpiration',
             expr: |||
-              kubelet_certificate_manager_server_ttl_seconds < %(kubeletCertExpirationCriticalSeconds)s
-            ||| % $._config,
+              kubelet_certificate_manager_server_ttl_seconds%(additionalSelectorBraces)s < %(kubeletCertExpirationCriticalSeconds)s
+            ||| % config,
             labels: {
               severity: 'critical',
             },
@@ -288,8 +290,8 @@ local utils = import '../lib/utils.libsonnet';
           {
             alert: 'KubeletClientCertificateRenewalErrors',
             expr: |||
-              increase(kubelet_certificate_manager_client_expiration_renew_errors[5m]) > 0
-            ||| % $._config,
+              increase(kubelet_certificate_manager_client_expiration_renew_errors%(additionalSelectorBraces)s[5m]) > 0
+            ||| % config,
             labels: {
               severity: 'warning',
             },
@@ -304,8 +306,8 @@ local utils = import '../lib/utils.libsonnet';
           {
             alert: 'KubeletServerCertificateRenewalErrors',
             expr: |||
-              increase(kubelet_server_expiration_renew_errors[5m]) > 0
-            ||| % $._config,
+              increase(kubelet_server_expiration_renew_errors%(additionalSelectorBraces)s[5m]) > 0
+            ||| % config,
             labels: {
               severity: 'warning',
             },
@@ -319,7 +321,7 @@ local utils = import '../lib/utils.libsonnet';
           },
           (import '../lib/instance_unreachable_alert.libsonnet') {
             componentName:: 'Kubelet',
-            selector:: $._config.kubeletSelector,
+            selector:: config.kubeletSelector,
           },
           {
             // Use kube-state-metrics as an anchor to detect kubelet down while
