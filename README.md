@@ -297,6 +297,35 @@ Each rule module validates the labels for its own rules, so the full mixin accep
 - The Windows node memory utilisation ratio keeps its global `scalar(sum(...))` denominator, because the expression has no `by(...)` or `on(...)` clause to extend.
 - The bundled dashboards do not support `additionalGrouping.recordingRules`. Dashboard generation is not blocked, but arbitrary dimensions require corresponding Grafana variables and selectors. Without those customizations, two tenants exposing the same cluster, namespace, and pod identity can produce multiple right-hand series for dashboard joins that match only those standard labels. Deployments that need grouped dashboards must provide customized dashboards that select and match every additional dimension.
 
+## Additional selectors
+
+`additionalSelectors` adds label matchers, such as a tenant, to the raw metrics that the recording and alerting rules query. Configure the matchers separately for the two kinds of rules. Each entry is an object with a `label`, a `matcher` and a `value`:
+
+```jsonnet
+    additionalSelectors+: {
+      recordingRules: [
+        { label: 'tenant', matcher: '=', value: 'team-a' },
+      ],
+      alertingRules: [
+        { label: 'tenant', matcher: '=', value: 'team-a' },
+      ],
+    },
+```
+
+The `matcher` is one of `=`, `!=`, `=~` and `!~`. The `value` is a string. With the example above, a selector such as `kube_pod_status_phase{job="kube-state-metrics"}` becomes `kube_pod_status_phase{job="kube-state-metrics",tenant="team-a"}`. Without additional selectors, the rendered rules are unchanged.
+
+### Which selectors are extended
+
+The mixin appends the matchers to every selector of a raw metric in the rules. This includes the exporter selectors, such as `cadvisorSelector` and `kubeStateMetricsSelector`, the metrics that have no exporter selector, the `absent()` alerts, and the `kube_pod_labels` join of a label-enrichment wrapper.
+
+References to the mixin's own recording rules do not receive the matchers, because the rules that produce those series already filter the raw metrics. The bundled dashboards do not apply `additionalSelectors` either.
+
+### Validation
+
+Rendering fails when an entry is not an object with exactly the fields `label`, `matcher` and `value`, when the label is not a valid Prometheus label name or is `__name__`, when the matcher is not supported, or when the value is not a string.
+
+The alerts that read recording rules, such as `KubeAPIErrorBudgetBurn`, `KubeletPlegDurationHigh` and the CPU and memory overcommit alerts, cannot filter the raw metrics behind those rules. Rendering fails when `alertingRules` contains an entry that `recordingRules` does not contain.
+
 ## Customising the mixin
 
 Kubernetes-mixin allows you to override the selectors used for various jobs, to match those used in your Prometheus set. You can also customize the dashboard names and add grafana tags.
