@@ -30,7 +30,8 @@ local utils = import '../lib/utils.libsonnet';
       ['cpu', 'endpoint', 'instance', 'job', 'service'],
       ['mode']
     ),
-    local config = $._config {
+    local selectors = utils.selectors($._config, 'recordingRules'),
+    local config = selectors.apply($._config) {
       groupingCluster: grouping.by([$._config.clusterLabel]),
       groupingClusterNode: grouping.by([$._config.clusterLabel, 'node']),
       groupingClusterNamespacePod: grouping.by([$._config.clusterLabel, 'namespace', $._config.podLabel]),

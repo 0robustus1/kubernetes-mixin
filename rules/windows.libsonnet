@@ -23,7 +23,8 @@ local utils = import '../lib/utils.libsonnet';
       'Windows recording rules',
       ['container_id', 'core', 'endpoint', 'instance', 'job', 'service']
     ),
-    local config = $._config {
+    local selectors = utils.selectors($._config, 'recordingRules'),
+    local config = selectors.apply($._config) {
       groupingCluster: grouping.by([$._config.clusterLabel]),
       groupingClusterInstance: grouping.by([$._config.clusterLabel, 'instance']),
       groupingClusterInstanceCore: grouping.by([$._config.clusterLabel, 'instance', 'core']),
@@ -95,7 +96,7 @@ local utils = import '../lib/utils.libsonnet';
             record: 'node:windows_node_memory_totalCached_bytes:sum',
             expr: |||
               (windows_memory_cache_bytes{%(windowsExporterSelector)s} + windows_memory_modified_page_list_bytes{%(windowsExporterSelector)s} + windows_memory_standby_cache_core_bytes{%(windowsExporterSelector)s} + windows_memory_standby_cache_normal_priority_bytes{%(windowsExporterSelector)s} + windows_memory_standby_cache_reserve_bytes{%(windowsExporterSelector)s})
-            ||| % $._config,
+            ||| % config,
           },
           {
             record: ':windows_node_memory_MemTotal_bytes:sum',
@@ -135,13 +136,13 @@ local utils = import '../lib/utils.libsonnet';
             record: 'node:windows_node_memory_utilisation:',
             expr: |||
               1 - (node:windows_node_memory_bytes_available:sum / node:windows_node_memory_bytes_total:sum)
-            ||| % $._config,
+            ||| % config,
           },
           {
             record: 'node:windows_node_memory_swap_io_pages:irate',
             expr: |||
               irate(windows_memory_swap_page_operations_total{%(windowsExporterSelector)s}[5m])
-            ||| % $._config,
+            ||| % config,
           },
           {
             // Disk utilisation (ms spent, by rate() it's bound by 1 second)

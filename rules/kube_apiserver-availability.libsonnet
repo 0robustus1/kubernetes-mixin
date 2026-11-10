@@ -23,7 +23,8 @@ local utils = import '../lib/utils.libsonnet';
       'kube-apiserver availability recording rules',
       ['code', 'le', 'resource', 'scope', 'verb']
     ),
-    local config = $._config {
+    local selectors = utils.selectors($._config, 'recordingRules'),
+    local config = selectors.apply($._config) {
       groupingCluster: grouping.by([$._config.clusterLabel]),
       groupingClusterVerbScope: grouping.by([$._config.clusterLabel, 'verb', 'scope']),
       groupingClusterVerbScopeLe: grouping.by([$._config.clusterLabel, 'verb', 'scope', 'le']),
@@ -60,7 +61,7 @@ local utils = import '../lib/utils.libsonnet';
           {
             record: 'cluster_verb_scope_le:apiserver_request_sli_duration_seconds_bucket:increase1h',
             expr: |||
-              sum by (%(groupingClusterVerbScopeLe)s) (increase(apiserver_request_sli_duration_seconds_bucket[1h]))
+              sum by (%(groupingClusterVerbScopeLe)s) (increase(apiserver_request_sli_duration_seconds_bucket%(additionalSelectorBraces)s[1h]))
             ||| % config,
           },
           {
@@ -164,7 +165,7 @@ local utils = import '../lib/utils.libsonnet';
             record: 'code_resource:apiserver_request_total:rate5m',
             expr: |||
               sum by (%s) (rate(apiserver_request_total{%s}[5m]))
-            ||| % [grouping.by([$._config.clusterLabel, 'code', 'resource']), std.join(',', [$._config.kubeApiserverSelector, verb.selector])],
+            ||| % [grouping.by([$._config.clusterLabel, 'code', 'resource']), std.join(',', [config.kubeApiserverSelector, verb.selector])],
             labels: {
               verb: verb.type,
             },
@@ -175,7 +176,7 @@ local utils = import '../lib/utils.libsonnet';
             record: 'code_verb:apiserver_request_total:increase1h',
             expr: |||
               sum by (%s) (increase(apiserver_request_total{%s,verb=~"LIST|GET|POST|PUT|PATCH|DELETE",code=~"%s"}[1h]))
-            ||| % [grouping.by([$._config.clusterLabel, 'code', 'verb']), $._config.kubeApiserverSelector, code],
+            ||| % [grouping.by([$._config.clusterLabel, 'code', 'verb']), config.kubeApiserverSelector, code],
           }
           for code in ['2..', '3..', '4..', '5..']
         ],

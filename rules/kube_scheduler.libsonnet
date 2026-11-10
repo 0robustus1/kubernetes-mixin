@@ -31,6 +31,8 @@ local utils = import '../lib/utils.libsonnet';
       ['instance', $._config.podLabel]
     ),
     assert std.isArray(grouping.labels),
+    local selectors = utils.selectors($._config, 'recordingRules'),
+    local config = selectors.apply($._config),
 
     groups+: [
       {
@@ -40,7 +42,7 @@ local utils = import '../lib/utils.libsonnet';
             record: 'cluster_quantile:%s:histogram_quantile' % metric,
             expr: |||
               histogram_quantile(%(quantile)s, sum(rate(%(metric)s_bucket{%(kubeSchedulerSelector)s}[5m])) without(instance, %(podLabel)s))
-            ||| % ({ quantile: quantile, metric: metric } + $._config),
+            ||| % ({ quantile: quantile, metric: metric } + config),
             labels: {
               quantile: quantile,
             },

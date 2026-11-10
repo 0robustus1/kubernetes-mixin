@@ -23,6 +23,8 @@ local utils = import '../lib/utils.libsonnet';
       'kube-apiserver histogram recording rules',
       ['le', 'quantile', 'verb']
     ),
+    local selectors = utils.selectors($._config, 'recordingRules'),
+    local config = selectors.apply($._config),
     local verbs = [
       { type: 'read', selector: $._config.kubeApiserverReadSelector },
       { type: 'write', selector: $._config.kubeApiserverWriteSelector },
@@ -37,7 +39,7 @@ local utils = import '../lib/utils.libsonnet';
               record: 'cluster_quantile:apiserver_request_sli_duration_seconds:histogram_quantile',
               expr: |||
                 histogram_quantile(0.99, sum by (%s) (rate(apiserver_request_sli_duration_seconds_bucket{%s}[5m]))) > 0
-              ||| % [grouping.by([$._config.clusterLabel, 'le', 'resource']), std.join(',', [$._config.kubeApiserverSelector, verb.selector, $._config.kubeApiserverNonStreamingSelector])],
+              ||| % [grouping.by([$._config.clusterLabel, 'le', 'resource']), std.join(',', [config.kubeApiserverSelector, verb.selector, $._config.kubeApiserverNonStreamingSelector])],
               labels: {
                 verb: verb.type,
                 quantile: '0.99',

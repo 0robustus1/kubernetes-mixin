@@ -23,6 +23,8 @@ local utils = import '../lib/utils.libsonnet';
       'kube-apiserver burn-rate recording rules',
       ['code', 'le', 'resource', 'scope', 'verb']
     ),
+    local selectors = utils.selectors($._config, 'recordingRules'),
+    local config = selectors.apply($._config),
     local groupingCluster = grouping.by([$._config.clusterLabel]),
     local unitSeconds = {
       ms: 0.001,
@@ -119,7 +121,7 @@ local utils = import '../lib/utils.libsonnet';
         ||| % {
           groupingCluster: groupingCluster,
           window: window,
-          kubeApiserverSelector: $._config.kubeApiserverSelector,
+          kubeApiserverSelector: config.kubeApiserverSelector,
           kubeApiserverReadSelector: $._config.kubeApiserverReadSelector,
           kubeApiserverNonStreamingSelector: $._config.kubeApiserverNonStreamingSelector,
           kubeApiserverReadResourceLatency: $._config.kubeApiserverReadResourceLatency,
@@ -142,7 +144,7 @@ local utils = import '../lib/utils.libsonnet';
         ||| % {
           groupingCluster: groupingCluster,
           window: window,
-          kubeApiserverSelector: $._config.kubeApiserverSelector,
+          kubeApiserverSelector: config.kubeApiserverSelector,
           kubeApiserverWriteSelector: $._config.kubeApiserverWriteSelector,
           kubeApiserverNonStreamingSelector: $._config.kubeApiserverNonStreamingSelector,
           kubeApiserverWriteLatency: $._config.kubeApiserverWriteLatency,
@@ -154,7 +156,7 @@ local utils = import '../lib/utils.libsonnet';
       ||| % {
         groupingCluster: groupingCluster,
         window: window,
-        kubeApiserverSelector: $._config.kubeApiserverSelector,
+        kubeApiserverSelector: config.kubeApiserverSelector,
         verbSelector: if verb == 'read' then $._config.kubeApiserverReadSelector else $._config.kubeApiserverWriteSelector,
       },
 

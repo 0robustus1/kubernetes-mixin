@@ -28,7 +28,8 @@ local utils = import '../lib/utils.libsonnet';
       'application recording rules',
       ['endpoint', 'instance', 'job', 'job_name', 'phase', 'replicaset', 'service', 'workload', 'workload_type']
     ),
-    local config = $._config {
+    local selectors = utils.selectors($._config, 'recordingRules'),
+    local config = selectors.apply($._config) {
       groupingClusterNamespacePodContainer: grouping.by([$._config.clusterLabel, 'namespace', 'pod', 'container']),
       groupingClusterNamespacePod: grouping.by([$._config.clusterLabel, 'namespace', 'pod']),
       groupingClusterNamespacePodNode: grouping.by([$._config.clusterLabel, 'namespace', 'pod', 'node']),
@@ -67,7 +68,7 @@ local utils = import '../lib/utils.libsonnet';
               sum by (%(groupingClusterNamespacePodContainer)s) (
                 rate(container_cpu_usage_seconds_total{%(cadvisorSelector)s, image!=""}[5m])
               ) * on (%(matchingClusterNamespacePod)s) group_left(node) topk by (%(matchingClusterNamespacePod)s) (
-                1, max by(%(groupingClusterNamespacePodNode)s) (kube_pod_info{node!=""})
+                1, max by(%(groupingClusterNamespacePodNode)s) (kube_pod_info{%(prefixedAdditionalSelector)snode!=""})
               )
             ||| % config,
           },
@@ -77,7 +78,7 @@ local utils = import '../lib/utils.libsonnet';
               sum by (%(groupingClusterNamespacePodContainer)s) (
                 irate(container_cpu_usage_seconds_total{%(cadvisorSelector)s, image!=""}[5m])
               ) * on (%(matchingClusterNamespacePod)s) group_left(node) topk by (%(matchingClusterNamespacePod)s) (
-                1, max by(%(groupingClusterNamespacePodNode)s) (kube_pod_info{node!=""})
+                1, max by(%(groupingClusterNamespacePodNode)s) (kube_pod_info{%(prefixedAdditionalSelector)snode!=""})
               )
             ||| % config,
           },
@@ -91,7 +92,7 @@ local utils = import '../lib/utils.libsonnet';
             expr: |||
               container_memory_working_set_bytes{%(cadvisorSelector)s, image!=""}
               * on (%(matchingClusterNamespacePod)s) group_left(node) topk by(%(matchingClusterNamespacePod)s) (1,
-                max by(%(groupingClusterNamespacePodNode)s) (kube_pod_info{node!=""})
+                max by(%(groupingClusterNamespacePodNode)s) (kube_pod_info{%(prefixedAdditionalSelector)snode!=""})
               )
             ||| % config,
           },
@@ -105,7 +106,7 @@ local utils = import '../lib/utils.libsonnet';
             expr: |||
               container_memory_rss{%(cadvisorSelector)s, image!=""}
               * on (%(matchingClusterNamespacePod)s) group_left(node) topk by(%(matchingClusterNamespacePod)s) (1,
-                max by(%(groupingClusterNamespacePodNode)s) (kube_pod_info{node!=""})
+                max by(%(groupingClusterNamespacePodNode)s) (kube_pod_info{%(prefixedAdditionalSelector)snode!=""})
               )
             ||| % config,
           },
@@ -119,7 +120,7 @@ local utils = import '../lib/utils.libsonnet';
             expr: |||
               container_memory_cache{%(cadvisorSelector)s, image!=""}
               * on (%(matchingClusterNamespacePod)s) group_left(node) topk by(%(matchingClusterNamespacePod)s) (1,
-                max by(%(groupingClusterNamespacePodNode)s) (kube_pod_info{node!=""})
+                max by(%(groupingClusterNamespacePodNode)s) (kube_pod_info{%(prefixedAdditionalSelector)snode!=""})
               )
             ||| % config,
           },
@@ -133,7 +134,7 @@ local utils = import '../lib/utils.libsonnet';
             expr: |||
               container_memory_swap{%(cadvisorSelector)s, image!=""}
               * on (%(matchingClusterNamespacePod)s) group_left(node) topk by(%(matchingClusterNamespacePod)s) (1,
-                max by(%(groupingClusterNamespacePodNode)s) (kube_pod_info{node!=""})
+                max by(%(groupingClusterNamespacePodNode)s) (kube_pod_info{%(prefixedAdditionalSelector)snode!=""})
               )
             ||| % config,
           },
@@ -147,7 +148,7 @@ local utils = import '../lib/utils.libsonnet';
             expr: |||
               kube_pod_container_resource_requests{resource="memory",%(kubeStateMetricsSelector)s}  * on (%(matchingNamespacePodCluster)s)
               group_left() max by (%(groupingNamespacePodCluster)s) (
-                (kube_pod_status_phase{phase=~"Pending|Running"} == 1)
+                (kube_pod_status_phase{%(prefixedAdditionalSelector)sphase=~"Pending|Running"} == 1)
               )
             ||| % config,
           },
@@ -159,7 +160,7 @@ local utils = import '../lib/utils.libsonnet';
                       max by (%(groupingNamespacePodContainerCluster)s) (
                         kube_pod_container_resource_requests{resource="memory",%(kubeStateMetricsSelector)s}
                       ) * on(%(matchingNamespacePodCluster)s) group_left() max by (%(groupingNamespacePodCluster)s) (
-                        kube_pod_status_phase{phase=~"Pending|Running"} == 1
+                        kube_pod_status_phase{%(prefixedAdditionalSelector)sphase=~"Pending|Running"} == 1
                       )
                   )
               )
@@ -175,7 +176,7 @@ local utils = import '../lib/utils.libsonnet';
             expr: |||
               kube_pod_container_resource_requests{resource="cpu",%(kubeStateMetricsSelector)s}  * on (%(matchingNamespacePodCluster)s)
               group_left() max by (%(groupingNamespacePodCluster)s) (
-                (kube_pod_status_phase{phase=~"Pending|Running"} == 1)
+                (kube_pod_status_phase{%(prefixedAdditionalSelector)sphase=~"Pending|Running"} == 1)
               )
             ||| % config,
           },
@@ -187,7 +188,7 @@ local utils = import '../lib/utils.libsonnet';
                       max by (%(groupingNamespacePodContainerCluster)s) (
                         kube_pod_container_resource_requests{resource="cpu",%(kubeStateMetricsSelector)s}
                       ) * on(%(matchingNamespacePodCluster)s) group_left() max by (%(groupingNamespacePodCluster)s) (
-                        kube_pod_status_phase{phase=~"Pending|Running"} == 1
+                        kube_pod_status_phase{%(prefixedAdditionalSelector)sphase=~"Pending|Running"} == 1
                       )
                   )
               )
@@ -203,7 +204,7 @@ local utils = import '../lib/utils.libsonnet';
             expr: |||
               kube_pod_container_resource_limits{resource="memory",%(kubeStateMetricsSelector)s}  * on (%(matchingNamespacePodCluster)s)
               group_left() max by (%(groupingNamespacePodCluster)s) (
-                (kube_pod_status_phase{phase=~"Pending|Running"} == 1)
+                (kube_pod_status_phase{%(prefixedAdditionalSelector)sphase=~"Pending|Running"} == 1)
               )
             ||| % config,
           },
@@ -215,7 +216,7 @@ local utils = import '../lib/utils.libsonnet';
                       max by (%(groupingNamespacePodContainerCluster)s) (
                         kube_pod_container_resource_limits{resource="memory",%(kubeStateMetricsSelector)s}
                       ) * on(%(matchingNamespacePodCluster)s) group_left() max by (%(groupingNamespacePodCluster)s) (
-                        kube_pod_status_phase{phase=~"Pending|Running"} == 1
+                        kube_pod_status_phase{%(prefixedAdditionalSelector)sphase=~"Pending|Running"} == 1
                       )
                   )
               )
@@ -231,7 +232,7 @@ local utils = import '../lib/utils.libsonnet';
             expr: |||
               kube_pod_container_resource_limits{resource="cpu",%(kubeStateMetricsSelector)s}  * on (%(matchingNamespacePodCluster)s)
               group_left() max by (%(groupingNamespacePodCluster)s) (
-                (kube_pod_status_phase{phase=~"Pending|Running"} == 1)
+                (kube_pod_status_phase{%(prefixedAdditionalSelector)sphase=~"Pending|Running"} == 1)
               )
             ||| % config,
           },
@@ -243,7 +244,7 @@ local utils = import '../lib/utils.libsonnet';
                       max by (%(groupingNamespacePodContainerCluster)s) (
                         kube_pod_container_resource_limits{resource="cpu",%(kubeStateMetricsSelector)s}
                       ) * on(%(matchingNamespacePodCluster)s) group_left() max by (%(groupingNamespacePodCluster)s) (
-                        kube_pod_status_phase{phase=~"Pending|Running"} == 1
+                        kube_pod_status_phase{%(prefixedAdditionalSelector)sphase=~"Pending|Running"} == 1
                       )
                   )
               )

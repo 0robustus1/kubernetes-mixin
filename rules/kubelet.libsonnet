@@ -27,7 +27,8 @@ local utils = import '../lib/utils.libsonnet';
       'kubelet recording rules',
       ['le', 'quantile']
     ),
-    local config = $._config {
+    local selectors = utils.selectors($._config, 'recordingRules'),
+    local config = selectors.apply($._config) {
       groupingClusterInstance: grouping.by([$._config.clusterLabel, 'instance']),
       groupingClusterInstanceLe: grouping.by([$._config.clusterLabel, 'instance', 'le']),
       groupingClusterInstanceNode: grouping.by([$._config.clusterLabel, 'instance', 'node']),

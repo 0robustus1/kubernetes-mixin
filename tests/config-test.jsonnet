@@ -301,4 +301,29 @@ assert std.length(std.findSubstr('by (cluster, instance, job, namespace, evictio
 local conflictingVolume = findAlerts(conflictingAlertGroups, 'KubePersistentVolumeFillingUp')[0];
 assert std.length(std.findSubstr('unless on(cluster, namespace, persistentvolumeclaim, eviction_signal, operation_type, label_team, tenant)', conflictingVolume.expr)) == 2;
 
+// Additional selectors extend the exporter selectors of the recording rules and the selectors of
+// raw metrics that have none. References to other recording rules stay unchanged.
+local selectorRules = (mixin + (import '../rules/windows.libsonnet')) {
+  _config+:: {
+    additionalSelectors+: {
+      recordingRules: [
+        { label: 'tenant', matcher: '=~', value: 'team-.*' },
+        { label: 'env', matcher: '!=', value: 'dev' },
+      ],
+    },
+  },
+};
+local selectedNodeCPU = findRule(selectorRules.prometheusRules.groups, 'node:node_num_cpu:sum');
+assert std.length(std.findSubstr('node_cpu_seconds_total{mode="idle",job="node-exporter",tenant=~"team-.*",env!="dev"}', selectedNodeCPU.expr)) == 1;
+assert std.length(std.findSubstr('topk by(cluster, namespace, pod) (1, node_namespace_pod:kube_pod_info:)', selectedNodeCPU.expr)) == 1;
+local selectedAPIBuckets = findRule(selectorRules.prometheusRules.groups, 'cluster_verb_scope_le:apiserver_request_sli_duration_seconds_bucket:increase1h');
+assert std.length(std.findSubstr('apiserver_request_sli_duration_seconds_bucket{tenant=~"team-.*",env!="dev"}[1h]', selectedAPIBuckets.expr)) == 1;
+local selectedPodInfo = findRule(selectorRules.prometheusRules.groups, 'node_namespace_pod:kube_pod_info:');
+assert std.length(std.findSubstr('kube_pod_info{job="kube-state-metrics",tenant=~"team-.*",env!="dev",node!=""}', selectedPodInfo.expr)) == 1;
+// Selectors of the other kinds of rules and the dashboards are not affected.
+assert findRule(mixin.prometheusRules.groups, 'node:node_num_cpu:sum').expr ==
+       findRule((mixin { _config+:: { additionalSelectors+: { alertingRules: [{ label: 'tenant', matcher: '=', value: 'a' }] } } }).prometheusRules.groups, 'node:node_num_cpu:sum').expr;
+// Overriding additionalSelectors without `+` leaves the lists it does not define empty.
+assert std.length((mixin { _config+:: { additionalSelectors: {} } }).prometheusRules.groups) > 0;
+
 true
